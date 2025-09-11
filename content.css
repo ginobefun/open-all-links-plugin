@@ -1,0 +1,619 @@
+/* Open All Links - Content Styles */
+
+#open-all-links-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 340px;
+  background: #ffffff;
+  border: 1px solid #e0e6ed;
+  border-radius: 16px;
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  z-index: 2147483647;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+/* 折叠状态 */
+#open-all-links-panel.oal-collapsed {
+  width: 340px;
+}
+
+#open-all-links-panel.oal-collapsed .oal-body {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding: 0 16px;
+}
+
+/* 固定状态 */
+#open-all-links-panel.oal-pinned {
+  box-shadow: 0 20px 80px rgba(59, 130, 246, 0.12), 0 8px 32px rgba(59, 130, 246, 0.08);
+  border-color: #3b82f6;
+}
+
+/* 激活状态 */
+#open-all-links-panel.active {
+  border-color: #3b82f6;
+  box-shadow: 0 16px 64px rgba(59, 130, 246, 0.15), 0 8px 24px rgba(59, 130, 246, 0.08);
+}
+
+/* 有选择状态 */
+#open-all-links-panel.has-selection {
+  border-color: #3b82f6;
+  box-shadow: 0 16px 64px rgba(59, 130, 246, 0.15), 0 8px 24px rgba(59, 130, 246, 0.08);
+}
+
+#open-all-links-panel.has-selection .oal-header {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+}
+
+.oal-header {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+  padding: 16px 18px;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.oal-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.oal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.oal-logo {
+  font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+.oal-title {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.oal-quick-stats {
+  font-size: 11px;
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 12px;
+  margin-left: auto;
+  margin-right: 8px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.oal-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.oal-collapse-btn,
+.oal-pin-btn,
+.oal-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  padding: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.oal-collapse-btn:hover,
+.oal-pin-btn:hover,
+.oal-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.oal-close {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.oal-collapse-icon {
+  transition: transform 0.3s ease;
+  font-size: 10px;
+}
+
+.oal-pin-icon {
+  font-size: 11px;
+}
+
+/* 面板主体 */
+.oal-body {
+  max-height: 400px;
+  overflow: hidden;
+  opacity: 1;
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+  position: relative;
+}
+
+.oal-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* 快速操作区域 */
+.oal-quick-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.oal-quick-actions .oal-btn {
+  flex: 1;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 控制区域 */
+.oal-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.oal-action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.oal-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.oal-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.oal-btn:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.oal-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.oal-btn:disabled {
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+.oal-btn-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* 快速操作按钮样式 - 主要操作 */
+.oal-quick-toggle {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.oal-quick-toggle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.oal-quick-toggle:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+  transform: translateY(-2px);
+}
+
+.oal-quick-toggle:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+/* 关闭选择模式时 */
+#open-all-links-panel.active .oal-quick-toggle {
+  background: #64748b;
+  border-color: #64748b;
+}
+
+#open-all-links-panel.active .oal-quick-toggle:hover:not(:disabled) {
+  background: #475569;
+  border-color: #475569;
+  box-shadow: 0 8px 24px rgba(100, 116, 139, 0.25);
+}
+
+/* 智能打开按钮 - 次要操作 */
+.oal-quick-open {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  font-weight: 600;
+}
+
+.oal-quick-open:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 操作按钮样式 - 统一风格 */
+.oal-select-all {
+  flex: 1;
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #cbd5e1;
+  font-weight: 600;
+}
+
+.oal-select-all:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+}
+
+.oal-deselect-all {
+  flex: 1;
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #cbd5e1;
+  font-weight: 600;
+}
+
+.oal-deselect-all:hover:not(:disabled) {
+  background: #64748b;
+  color: white;
+  border-color: #64748b;
+  box-shadow: 0 8px 24px rgba(100, 116, 139, 0.2);
+}
+
+/* 主要行动按钮 */
+.oal-open-selected {
+  width: 100%;
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 16px 20px;
+  min-height: 52px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.oal-open-selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.oal-open-selected:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.3);
+}
+
+.oal-open-selected:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.oal-primary {
+  position: relative;
+  overflow: visible;
+}
+
+.oal-primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(255,255,255,0.1) 100%);
+  pointer-events: none;
+}
+
+/* 过滤选择区域 */
+.oal-filter-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.oal-filter-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.oal-filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oal-filter-label::before {
+  content: '🎁';
+  font-size: 14px;
+}
+
+.oal-filter-select {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.oal-filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.oal-filter-select:disabled {
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 统计信息区域 */
+.oal-stats {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 16px 16px;
+  padding: 18px 20px;
+  margin-top: 16px;
+  margin-left: -20px;
+  margin-right: -20px;
+  margin-bottom: -20px;
+  position: relative;
+}
+
+.oal-stats::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #cbd5e1 50%, transparent 100%);
+}
+
+.oal-stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.oal-stats-row:last-child {
+  margin-bottom: 0;
+}
+
+.oal-stats-label {
+  color: #475569;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oal-stats-label::before {
+  content: '\2022';
+  color: #cbd5e1;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.oal-stats-value {
+  color: #3b82f6;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.08);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  min-width: 24px;
+  text-align: center;
+}
+
+/* 复选框样式 */
+.oal-link-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  margin-left: 0;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  position: relative;
+  z-index: 1000;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+/* 通知样式 */
+.oal-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 2147483648;
+  animation: oal-fade-in-out 3s ease-in-out;
+}
+
+@keyframes oal-fade-in-out {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  #open-all-links-panel {
+    width: 320px;
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: calc(100vw - 40px);
+    max-width: 320px;
+  }
+  
+  .oal-body {
+    padding: 16px;
+  }
+  
+  .oal-quick-actions .oal-btn {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+}
+
+/* 确保不影响页面原有样式 */
+#open-all-links-panel * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+#open-all-links-panel button {
+  outline: none;
+}
+
+#open-all-links-panel button:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  outline: none;
+}

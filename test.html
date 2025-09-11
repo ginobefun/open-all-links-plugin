@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open All Links - 测试页面</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      line-height: 1.6; 
+      margin: 0; 
+      padding: 20px; 
+      background: #f5f5f5; 
+    }
+    .header { 
+      background: white; 
+      padding: 15px 20px; 
+      border-radius: 8px; 
+      margin-bottom: 20px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .navigation {
+      background: #2c3e50;
+      padding: 10px 0;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      padding: 0 20px;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .content { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 8px; 
+      margin-bottom: 20px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .article-list { 
+      display: grid; 
+      gap: 15px; 
+    }
+    .article-item { 
+      border: 1px solid #e0e0e0; 
+      padding: 15px; 
+      border-radius: 8px; 
+      background: #fafafa; 
+    }
+    .article-title { 
+      font-size: 16px; 
+      font-weight: 600; 
+      margin-bottom: 8px; 
+    }
+    .article-title a { 
+      color: #2c3e50; 
+      text-decoration: none; 
+    }
+    .article-title a:hover { 
+      color: #3498db; 
+    }
+    .article-meta { 
+      font-size: 12px; 
+      color: #666; 
+      margin-bottom: 10px; 
+    }
+    .article-content { 
+      font-size: 14px; 
+      color: #555; 
+      line-height: 1.5; 
+    }
+    .sidebar { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 8px; 
+      margin-bottom: 20px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .sidebar h3 { 
+      margin-top: 0; 
+      color: #2c3e50; 
+    }
+    .sidebar ul { 
+      list-style: none; 
+      padding: 0; 
+    }
+    .sidebar li { 
+      margin-bottom: 8px; 
+    }
+    .sidebar a { 
+      color: #3498db; 
+      text-decoration: none; 
+    }
+    .footer {
+      background: #34495e;
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+    }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+    .footer-links a {
+      color: #ecf0f1;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- 头部区域 -->
+  <header class="header">
+    <h1>智能链接测试网站</h1>
+    <p>用于测试 Open All Links 插件的智能分类功能</p>
+  </header>
+
+  <!-- 导航栏（应该被过滤掉） -->
+  <nav class="navigation">
+    <div class="nav-links">
+      <a href="/home">首页</a>
+      <a href="/articles">文章</a>
+      <a href="/about">关于</a>
+      <a href="/contact">联系我们</a>
+      <a href="/login">登录</a>
+      <a href="/register">注册</a>
+    </div>
+  </nav>
+
+  <!-- 主要内容区域（应该被选中） -->
+  <main class="content">
+    <h2>最新文章列表</h2>
+    <div class="article-list">
+      <article class="article-item">
+        <h3 class="article-title">
+          <a href="https://example.com/article-1">如何使用Chrome扩展提高工作效率</a>
+        </h3>
+        <div class="article-meta">发布时间: 2025-01-15 | 作者: 张三</div>
+        <div class="article-content">
+          介绍了多种Chrome扩展工具，帮助用户提升日常工作效率...
+          <a href="https://example.com/article-1">阅读更多</a>
+        </div>
+      </article>
+
+      <article class="article-item">
+        <h3 class="article-title">
+          <a href="https://example.com/article-2">JavaScript ES2024 新特性详解</a>
+        </h3>
+        <div class="article-meta">发布时间: 2025-01-14 | 作者: 李四</div>
+        <div class="article-content">
+          深入分析JavaScript最新版本中的重要更新和新功能...
+          <a href="https://example.com/article-2">阅读更多</a>
+        </div>
+      </article>
+
+      <article class="article-item">
+        <h3 class="article-title">
+          <a href="https://example.com/article-3">前端性能优化最佳实践</a>
+        </h3>
+        <div class="article-meta">发布时间: 2025-01-13 | 作者: 王五</div>
+        <div class="article-content">
+          分享了多种前端性能优化技巧和工具的使用方法...
+          <a href="https://example.com/article-3">阅读更多</a>
+        </div>
+      </article>
+
+      <article class="article-item">
+        <h3 class="article-title">
+          <a href="https://example.com/article-4">Vue 3 Composition API 实战指南</a>
+        </h3>
+        <div class="article-meta">发布时间: 2025-01-12 | 作者: 赵六</div>
+        <div class="article-content">
+          通过实际项目案例讲解Vue 3 Composition API的使用技巧...
+          <a href="https://example.com/article-4">阅读更多</a>
+        </div>
+      </article>
+
+      <article class="article-item">
+        <h3 class="article-title">
+          <a href="https://example.com/article-5">React Hooks 深度解析</a>
+        </h3>
+        <div class="article-meta">发布时间: 2025-01-11 | 作者: 钱七</div>
+        <div class="article-content">
+          详细介绍React Hooks的原理和高级用法...
+          <a href="https://example.com/article-5">阅读更多</a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <!-- 侧边栏（可能被过滤） -->
+  <aside class="sidebar">
+    <h3>相关链接</h3>
+    <ul>
+      <li><a href="https://developer.mozilla.org">MDN Web Docs</a></li>
+      <li><a href="https://github.com">GitHub</a></li>
+      <li><a href="https://stackoverflow.com">Stack Overflow</a></li>
+      <li><a href="https://chrome.google.com/webstore">Chrome Web Store</a></li>
+    </ul>
+
+    <h3>标签云</h3>
+    <ul>
+      <li><a href="/tag/javascript">JavaScript</a></li>
+      <li><a href="/tag/react">React</a></li>
+      <li><a href="/tag/vue">Vue</a></li>
+      <li><a href="/tag/performance">性能优化</a></li>
+    </ul>
+  </aside>
+
+  <!-- 页脚（应该被过滤掉） -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="/privacy">隐私政策</a>
+      <a href="/terms">使用条款</a>
+      <a href="/support">技术支持</a>
+      <a href="/sitemap">网站地图</a>
+    </div>
+    <p style="text-align: center; margin-top: 15px;">
+      © 2025 测试网站. 保留所有权利.
+    </p>
+  </footer>
+
+  <script>
+    // 模拟动态加载内容
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('测试页面已加载，包含以下链接类型：');
+      console.log('- 导航链接（应该被过滤）');
+      console.log('- 文章标题链接（应该被选中）');  
+      console.log('- 侧边栏链接（可能被过滤）');
+      console.log('- 页脚链接（应该被过滤）');
+    });
+  </script>
+</body>
+</html>

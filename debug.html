@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open All Links - 调试页面</title>
+  <style>
+    body { 
+      font-family: monospace; 
+      padding: 20px; 
+      background: #f0f0f0; 
+      line-height: 1.6;
+    }
+    .debug-info { 
+      background: white; 
+      padding: 15px; 
+      margin: 10px 0; 
+      border-radius: 5px; 
+      border-left: 4px solid #007bff;
+    }
+    .error { border-left-color: #dc3545; background: #f8f9fa; }
+    .success { border-left-color: #28a745; background: #f8f9fa; }
+    .warning { border-left-color: #ffc107; background: #f8f9fa; }
+    
+    .test-links { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .test-links h3 { margin-top: 0; }
+    .test-links a { 
+      display: block; 
+      margin: 5px 0; 
+      padding: 8px; 
+      background: #e9ecef; 
+      text-decoration: none; 
+      border-radius: 3px;
+    }
+    .test-links a:hover { background: #dee2e6; }
+    
+    .nav-test { background: #343a40; color: white; padding: 10px; margin: 10px 0; }
+    .nav-test a { color: #adb5bd; margin: 0 10px; }
+    
+    pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    button { 
+      background: #007bff; 
+      color: white; 
+      border: none; 
+      padding: 8px 16px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      margin: 5px;
+    }
+    button:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <div class="debug-info">
+    <h1>🔧 Open All Links 调试页面</h1>
+    <p><strong>当前URL:</strong> <span id="currentUrl">加载中...</span></p>
+    <p><strong>用户代理:</strong> <span id="userAgent">加载中...</span></p>
+    <p><strong>页面加载时间:</strong> <span id="loadTime">加载中...</span></p>
+  </div>
+
+  <div class="debug-info">
+    <h2>🧪 插件状态检测</h2>
+    <button onclick="testExtension()">检测插件状态</button>
+    <button onclick="testContentScript()">检测内容脚本</button>
+    <button onclick="testClassifier()">检测分类器</button>
+    <button onclick="testNewFeatures()">测试新功能</button>
+    <div id="extensionStatus"></div>
+  </div>
+  
+  <div class="debug-info">
+    <h2>⌨️ 快捷键测试</h2>
+    <p><strong>可用的快捷键：</strong></p>
+    <ul>
+      <li><code>Ctrl+Shift+L</code> - 切换选择模式</li>
+      <li><code>Ctrl+Shift+A</code> - 全选链接</li>
+      <li><code>Ctrl+Shift+O</code> - 打开选中链接</li>
+      <li><code>Ctrl+Shift+C</code> - 折叠/展开面板</li>
+      <li><code>Ctrl+Shift+Q</code> - 快速打开推荐</li>
+      <li><code>Escape</code> - 关闭面板（未固定时）</li>
+    </ul>
+    <button onclick="showShortcutHelper()">显示快捷键提示</button>
+  </div>
+
+  <!-- 导航栏测试（应该被过滤） -->
+  <nav class="nav-test">
+    <strong>导航栏测试链接 (应该被过滤):</strong>
+    <a href="/home">首页</a>
+    <a href="/about">关于</a>
+    <a href="/login">登录</a>
+    <a href="/contact">联系我们</a>
+  </nav>
+
+  <!-- 内容链接测试（应该被选中） -->
+  <div class="test-links">
+    <h3>📝 内容链接测试 (应该被智能选中)</h3>
+    <a href="https://github.com/microsoft/vscode" class="article-link">Visual Studio Code 源码</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" class="article-link">JavaScript MDN 文档</a>
+    <a href="https://reactjs.org/docs/getting-started.html" class="article-link">React 官方文档</a>
+    <a href="https://nodejs.org/en/docs/" class="article-link">Node.js 文档</a>
+    <a href="https://www.typescriptlang.org/docs/" class="article-link">TypeScript 文档</a>
+  </div>
+
+  <!-- 侧边栏链接测试 -->
+  <div class="test-links sidebar">
+    <h3>📎 侧边栏链接测试 (可能被过滤)</h3>
+    <a href="https://stackoverflow.com" class="sidebar-link">Stack Overflow</a>
+    <a href="https://github.com" class="sidebar-link">GitHub</a>
+    <a href="/tag/javascript" class="sidebar-link">JavaScript 标签</a>
+    <a href="/tag/react" class="sidebar-link">React 标签</a>
+  </div>
+
+  <div class="debug-info">
+    <h2>🔗 链接统计</h2>
+    <p><strong>总链接数:</strong> <span id="totalLinks">计算中...</span></p>
+    <p><strong>内容链接数:</strong> <span id="contentLinks">计算中...</span></p>
+    <p><strong>导航链接数:</strong> <span id="navLinks">计算中...</span></p>
+    <p><strong>侧边栏链接数:</strong> <span id="sidebarLinks">计算中...</span></p>
+    <button onclick="analyzeLinks()">分析页面链接</button>
+    <button onclick="testSmartFilter()">测试智能过滤</button>
+  </div>
+
+  <div class="debug-info">
+    <h2>📊 详细链接分析</h2>
+    <pre id="linkAnalysis">点击"分析页面链接"按钮查看详细分析...</pre>
+  </div>
+
+  <div class="debug-info">
+    <h2>⚠️ 常见问题排查</h2>
+    <ul>
+      <li><strong>插件未检测到:</strong> 确保已在Chrome扩展管理页面启用插件</li>
+      <li><strong>脚本注入失败:</strong> 检查页面URL是否为受限页面（chrome://等）</li>
+      <li><strong>权限问题:</strong> 确保插件有访问当前网站的权限</li>
+      <li><strong>文件协议限制:</strong> 本地文件(file://)可能需要特殊权限设置</li>
+    </ul>
+    <button onclick="window.location.reload()">刷新页面</button>
+    <button onclick="window.location.href='http://localhost:8000/debug.html'">使用HTTP协议</button>
+  </div>
+
+  <script>
+    // 页面加载信息
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('currentUrl').textContent = window.location.href;
+      document.getElementById('userAgent').textContent = navigator.userAgent;
+      document.getElementById('loadTime').textContent = new Date().toLocaleString();
+      
+      // 自动分析链接
+      setTimeout(analyzeLinks, 500);
+      
+      // 检测插件
+      setTimeout(testExtension, 1000);
+    });
+
+    function testExtension() {
+      const statusDiv = document.getElementById('extensionStatus');
+      statusDiv.innerHTML = '<div class="warning">正在检测插件...</div>';
+      
+      // 检测content script是否加载
+      if (typeof window.openAllLinksManager !== 'undefined') {
+        statusDiv.innerHTML = '<div class="success">✅ 插件已正确加载</div>';
+      } else {
+        statusDiv.innerHTML = '<div class="error">❌ 插件未检测到，可能原因：<br>• 插件未安装或未启用<br>• 内容脚本加载失败<br>• 页面刷新后脚本未重新加载</div>';
+      }
+    }
+
+    function testContentScript() {
+      const statusDiv = document.getElementById('extensionStatus');
+      
+      if (typeof window.openAllLinksManager !== 'undefined') {
+        const manager = window.openAllLinksManager;
+        statusDiv.innerHTML = '<div class="success">✅ 内容脚本正常工作<br>• 过滤模式: ' + manager.filterMode + '<br>• 分类器可用: ' + (manager.classifier ? '是' : '否') + '</div>';
+      } else {
+        statusDiv.innerHTML = '<div class="error">❌ 内容脚本未加载</div>';
+      }
+    }
+
+    function testClassifier() {
+      const statusDiv = document.getElementById('extensionStatus');
+      
+      if (typeof window.LinkClassifier !== 'undefined') {
+        const classifier = new window.LinkClassifier();
+        const rules = classifier.getCurrentSiteRules();
+        statusDiv.innerHTML = '<div class="success">✅ 链接分类器正常<br>• 内容选择器数量: ' + (rules.contentSelectors?.length || 0) + '<br>• 排除选择器数量: ' + (rules.excludeSelectors?.length || 0) + '</div>';
+      } else {
+        statusDiv.innerHTML = '<div class="error">❌ 链接分类器未加载</div>';
+      }
+    }
+
+    function analyzeLinks() {
+      const allLinks = document.querySelectorAll('a[href]');
+      const contentArea = document.querySelectorAll('.test-links a, article a, .content a');
+      const navArea = document.querySelectorAll('nav a, .nav-test a');
+      const sidebarArea = document.querySelectorAll('.sidebar a');
+      
+      document.getElementById('totalLinks').textContent = allLinks.length;
+      document.getElementById('contentLinks').textContent = contentArea.length;
+      document.getElementById('navLinks').textContent = navArea.length;
+      document.getElementById('sidebarLinks').textContent = sidebarArea.length;
+      
+      // 详细分析
+      let analysis = '链接详细分析:\n\n';
+      
+      Array.from(allLinks).forEach((link, index) => {
+        analysis += `${index + 1}. ${link.textContent.trim() || '(无文本)'}\n`;
+        analysis += `   URL: ${link.href}\n`;
+        analysis += `   类名: ${link.className || '(无)'}\n`;
+        analysis += `   父元素: ${link.parentElement?.tagName || '(无)'}\n`;
+        
+        // 如果分类器可用，进行分类
+        if (typeof window.LinkClassifier !== 'undefined') {
+          const classifier = new window.LinkClassifier();
+          const classification = classifier.classifyLink(link);
+          analysis += `   分类: ${classification.type} (置信度: ${classification.confidence})\n`;
+        }
+        analysis += '\n';
+      });
+      
+      document.getElementById('linkAnalysis').textContent = analysis;
+    }
+
+    function testSmartFilter() {
+      if (typeof window.LinkClassifier === 'undefined') {
+        alert('链接分类器未加载！');
+        return;
+      }
+      
+      const classifier = new window.LinkClassifier();
+      const allLinks = Array.from(document.querySelectorAll('a[href]'));
+      const recommended = classifier.getRecommendedLinks(allLinks);
+      
+      alert(`智能过滤测试结果:\n总链接: ${allLinks.length}\n推荐链接: ${recommended.length}\n\n推荐的链接:\n${recommended.map(link => '• ' + link.textContent.trim()).join('\n')}`);
+    }
+
+    function testNewFeatures() {
+      const statusDiv = document.getElementById('extensionStatus');
+      
+      if (typeof window.openAllLinksManager !== 'undefined') {
+        const manager = window.openAllLinksManager;
+        const features = [];
+        
+        // 测试折叠功能
+        if (typeof manager.togglePanelCollapse === 'function') {
+          features.push('✅ 面板折叠功能');
+        }
+        
+        // 测试固定功能
+        if (typeof manager.togglePanelPin === 'function') {
+          features.push('✅ 面板固定功能');
+        }
+        
+        // 测试快速打开
+        if (typeof manager.quickOpenRecommended === 'function') {
+          features.push('✅ 快速打开推荐');
+        }
+        
+        // 测试键盘快捷键
+        if (typeof manager.addKeyboardShortcuts === 'function') {
+          features.push('✅ 键盘快捷键支持');
+        }
+        
+        statusDiv.innerHTML = '<div class="success">🎉 新功能检测结果:<br>' + features.join('<br>') + '</div>';
+      } else {
+        statusDiv.innerHTML = '<div class="error">❌ 插件未加载，无法测试新功能</div>';
+      }
+    }
+
+    function showShortcutHelper() {
+      const helpText = `
+🎯 Open All Links 快捷键指南
+
+主要功能：
+• Ctrl+Shift+L : 开启/关闭链接选择模式
+• Ctrl+Shift+A : 全选当前显示的链接  
+• Ctrl+Shift+O : 打开所有选中的链接
+• Ctrl+Shift+Q : 快速打开智能推荐的链接
+
+面板控制：
+• Ctrl+Shift+C : 折叠/展开控制面板
+• Escape : 关闭面板（仅在未固定时）
+
+💡 提示：在Mac上使用 Cmd 代替 Ctrl
+      `;
+      
+      alert(helpText);
+    }
+
+    // 错误监听
+    window.addEventListener('error', function(e) {
+      console.error('页面错误:', e.error);
+      const statusDiv = document.getElementById('extensionStatus');
+      if (statusDiv) {
+        statusDiv.innerHTML += '<div class="error">❌ 页面错误: ' + e.message + '</div>';
+      }
+    });
+  </script>
+</body>
+</html>
