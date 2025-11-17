@@ -506,14 +506,22 @@ class OpenAllLinksManager {
 
     const selectedLinksArray = Array.from(this.selectedLinks);
     const urls = selectedLinksArray.map(link => link.href);
-    
+
     // 记录用户选择模式以供智能学习
     this.recordUserSelection(selectedLinksArray);
-    
+
+    // 准备页面信息
+    const pageInfo = {
+      url: window.location.href,
+      title: document.title,
+      filterMode: this.filterMode
+    };
+
     // 发送消息给background script来打开链接
     chrome.runtime.sendMessage({
       action: 'openLinks',
-      urls: urls
+      urls: urls,
+      pageInfo: pageInfo
     });
 
     // 显示确认消息
