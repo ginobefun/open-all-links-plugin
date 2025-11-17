@@ -368,6 +368,9 @@ class OpenAllLinksManager {
       // 尝试在链接前面插入复选框
       this.insertCheckboxNearLink(link, checkbox);
       this.linkCheckboxes.set(link, checkbox);
+
+      // 为链接添加预览功能
+      this.setupLinkPreview(link);
     });
 
     this.updateStats(links.length);
@@ -677,6 +680,151 @@ class OpenAllLinksManager {
       console.error('Failed to reset learning data:', error);
       this.showNotification('重置失败');
     }
+  }
+
+  // ==========================================
+  // Link Preview Feature
+  // ==========================================
+
+  setupLinkPreview(link) {
+    let previewTimeout = null;
+    let currentPreview = null;
+
+    link.addEventListener('mouseenter', (e) => {
+      // 延迟显示，避免快速划过时频繁显示
+      previewTimeout = setTimeout(() => {
+        currentPreview = this.showLinkPreview(link, e);
+      }, 500);
+    });
+
+    link.addEventListener('mouseleave', () => {
+      if (previewTimeout) {
+        clearTimeout(previewTimeout);
+        previewTimeout = null;
+      }
+      if (currentPreview) {
+        this.hideLinkPreview(currentPreview);
+        currentPreview = null;
+      }
+    });
+  }
+
+  showLinkPreview(link, event) {
+    // 如果预览被禁用，直接返回
+    const settings = this.userPreferences;
+    if (settings && settings.disablePreview) {
+      return null;
+    }
+
+    // 创建预览元素
+    const preview = document.createElement('div');
+    preview.className = 'oal-link-preview';
+
+    // 获取链接分类和评分
+    const classification = this.classifier.classifyLink(link);
+    const score = this.classifier.calculateLinkScore(link);
+
+    // 获取链接信息
+    const linkText = link.textContent.trim() || '(无标题)';
+    const linkUrl = link.href;
+    const linkDomain = new URL(linkUrl).hostname;
+
+    // 计算评分百分比（假设最大分数为10）
+    const maxScore = 10;
+    const scorePercent = Math.min(100, (score / maxScore) * 100);
+
+    // 获取分类类型的中文名
+    const typeNames = {
+      'content': '内容链接',
+      'navigation': '导航链接',
+      'sidebar': '侧边栏',
+      'footer': '页脚链接',
+      'excluded': '已排除'
+    };
+
+    const typeName = typeNames[classification.type] || '其他';
+    const typeClass = `oal-type-${classification.type}`;
+
+    // 填充预览内容
+    preview.innerHTML = `
+      <div class="oal-link-preview-title">${this.escapeHtml(linkText)}</div>
+      <div class="oal-link-preview-url" title="${this.escapeHtml(linkUrl)}">${this.escapeHtml(linkUrl)}</div>
+      <div class="oal-link-preview-meta">
+        <span class="oal-link-preview-label">类型:</span>
+        <span class="oal-link-preview-value">
+          <span class="oal-link-preview-type ${typeClass}">${typeName}</span>
+        </span>
+        <span class="oal-link-preview-label">评分:</span>
+        <span class="oal-link-preview-value">
+          <span class="oal-link-preview-score">
+            ${score.toFixed(1)}
+            <span class="oal-score-bar">
+              <span class="oal-score-fill" style="width: ${scorePercent}%"></span>
+            </span>
+          </span>
+        </span>
+        <span class="oal-link-preview-label">置信度:</span>
+        <span class="oal-link-preview-value">${(classification.confidence * 100).toFixed(0)}%</span>
+      </div>
+      <div class="oal-link-preview-domain">
+        <span class="oal-domain-icon">🌐</span>
+        <span>${this.escapeHtml(linkDomain)}</span>
+      </div>
+      <div class="oal-link-preview-hint">按住 Ctrl 点击在新标签页中打开</div>
+    `;
+
+    // 添加到页面
+    document.body.appendChild(preview);
+
+    // 计算位置（避免超出视口）
+    const linkRect = link.getBoundingClientRect();
+    const previewRect = preview.getBoundingClientRect();
+
+    let left = linkRect.right + 10;
+    let top = linkRect.top;
+
+    // 如果右侧空间不足，显示在左侧
+    if (left + previewRect.width > window.innerWidth) {
+      left = linkRect.left - previewRect.width - 10;
+    }
+
+    // 如果左侧仍然不足，显示在链接上方
+    if (left < 0) {
+      left = Math.max(10, linkRect.left);
+      top = linkRect.top - previewRect.height - 10;
+    }
+
+    // 如果上方不足，显示在下方
+    if (top < 0) {
+      top = linkRect.bottom + 10;
+    }
+
+    // 如果下方不足，尽量靠上显示
+    if (top + previewRect.height > window.innerHeight) {
+      top = Math.max(10, window.innerHeight - previewRect.height - 10);
+    }
+
+    preview.style.left = `${left}px`;
+    preview.style.top = `${top}px`;
+
+    return preview;
+  }
+
+  hideLinkPreview(preview) {
+    if (preview && preview.parentNode) {
+      preview.style.animation = 'previewFadeOut 0.2s ease-in';
+      setTimeout(() => {
+        if (preview.parentNode) {
+          preview.parentNode.removeChild(preview);
+        }
+      }, 200);
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
 }
