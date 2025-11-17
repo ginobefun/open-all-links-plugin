@@ -341,28 +341,76 @@ class PopupManager {
     }
   }
 
-  showNotification(message) {
-    // 创建简单的通知提示
+  showNotification(message, type = 'success') {
+    // 创建通知提示
     const notification = document.createElement('div');
+    notification.className = 'popup-notification';
+
+    // 图标和颜色映射
+    const styles = {
+      success: {
+        icon: '✓',
+        bg: 'linear-gradient(135deg, #10b981, #059669)'
+      },
+      error: {
+        icon: '✕',
+        bg: 'linear-gradient(135deg, #ef4444, #dc2626)'
+      },
+      warning: {
+        icon: '⚠',
+        bg: 'linear-gradient(135deg, #f59e0b, #d97706)'
+      },
+      info: {
+        icon: 'ℹ',
+        bg: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+      }
+    };
+
+    const style = styles[type] || styles.info;
+
+    notification.innerHTML = `
+      <span class="notification-icon">${style.icon}</span>
+      <span class="notification-message">${this.escapeHtml(message)}</span>
+    `;
+
     notification.style.cssText = `
       position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #28a745;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: ${style.bg};
       color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 12px;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
       z-index: 10000;
-      animation: fadeInOut 2s ease-in-out;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      backdrop-filter: blur(10px);
+      max-width: 80%;
     `;
-    notification.textContent = message;
+
     document.body.appendChild(notification);
 
+    // 淡入动画
+    requestAnimationFrame(() => {
+      notification.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+      notification.style.opacity = '1';
+    });
+
+    // 自动消失
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(-50%) translateY(-10px)';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
     }, 2000);
   }
 
@@ -507,7 +555,7 @@ class PopupManager {
       }
     } catch (error) {
       console.error('Failed to reopen history:', error);
-      this.showNotification('操作失败');
+      this.showNotification('操作失败', 'error');
     }
   }
 
@@ -519,14 +567,14 @@ class PopupManager {
       });
 
       if (response && response.success) {
-        this.showNotification(`已打开 ${response.count} 个链接`);
+        this.showNotification(`已打开 ${response.count} 个链接`, 'success');
         window.close();
       } else {
-        this.showNotification('打开失败');
+        this.showNotification('打开失败', 'error');
       }
     } catch (error) {
       console.error('Failed to reopen favorite:', error);
-      this.showNotification('操作失败');
+      this.showNotification('操作失败', 'error');
     }
   }
 
@@ -538,12 +586,12 @@ class PopupManager {
       });
 
       if (response && response.success) {
-        this.showNotification('已删除');
+        this.showNotification('已删除', 'success');
         this.loadHistory();
       }
     } catch (error) {
       console.error('Failed to delete history:', error);
-      this.showNotification('删除失败');
+      this.showNotification('删除失败', 'error');
     }
   }
 
@@ -555,12 +603,12 @@ class PopupManager {
       });
 
       if (response && response.success) {
-        this.showNotification('已删除');
+        this.showNotification('已删除', 'success');
         this.loadFavorites();
       }
     } catch (error) {
       console.error('Failed to delete favorite:', error);
-      this.showNotification('删除失败');
+      this.showNotification('删除失败', 'error');
     }
   }
 

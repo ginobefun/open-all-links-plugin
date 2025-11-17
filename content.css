@@ -557,28 +557,107 @@
   border-radius: 4px;
 }
 
-/* 通知样式 */
+/* Notification System */
 .oal-notification {
   position: fixed;
-  top: 50%;
+  bottom: 20px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 6px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 8px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   font-weight: 500;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 2147483648;
-  animation: oal-fade-in-out 3s ease-in-out;
+  opacity: 0;
+  backdrop-filter: blur(10px);
+  max-width: 90%;
 }
 
+.oal-notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.oal-notification-message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Notification Types */
+.oal-notification-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+}
+
+.oal-notification-success .oal-notification-icon {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.oal-notification-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+}
+
+.oal-notification-error .oal-notification-icon {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.oal-notification-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+}
+
+.oal-notification-warning .oal-notification-icon {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.oal-notification-info {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
+}
+
+.oal-notification-info .oal-notification-icon {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Notification Animations */
+@keyframes oal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes oal-fade-out {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+
+/* 兼容旧版动画 */
 @keyframes oal-fade-in-out {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
 
 /* 响应式设计 */

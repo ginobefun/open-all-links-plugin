@@ -70,6 +70,81 @@
 - 更新 `manifest.json`
   - 添加 `link-grouper.js` 到内容脚本
 
+### 3. UI/UX 优化 🎨 (NEW!)
+**高优先级用户体验改进**
+
+#### 🎯 拖拽边界检测
+- **智能边界约束**: 面板拖拽时自动限制在视口范围内，防止拖出屏幕
+- **位置记忆**: 自动保存面板位置，下次访问恢复
+- **视觉反馈**: 拖拽时光标变为 `grabbing`，提供清晰的交互反馈
+- **按钮保护**: 拖拽时避免误触发按钮，提升操作准确性
+- **固定模式限制**: 固定状态下禁用拖拽，避免误操作
+
+**技术实现**:
+```javascript
+// content.js:162-245
+- 边界检测算法：限制在视口内留10px边距
+- 使用 localStorage 保存位置偏好
+- 新增 restorePanelPosition() 方法恢复位置
+```
+
+#### 🔔 多类型通知系统
+- **4种通知类型**: Success, Error, Warning, Info
+- **视觉区分**: 每种类型独特的颜色和图标
+- **渐变背景**: 现代化的渐变色设计
+- **流畅动画**: 淡入淡出 + 位移动画
+- **玻璃态效果**: backdrop-filter 毛玻璃效果
+- **响应式设计**: 最大宽度限制，适配不同设备
+
+**颜色方案**:
+- ✓ Success: 绿色渐变 (#10b981 → #059669)
+- ✕ Error: 红色渐变 (#ef4444 → #dc2626)
+- ⚠ Warning: 橙色渐变 (#f59e0b → #d97706)
+- ℹ Info: 蓝色渐变 (#3b82f6 → #2563eb)
+
+**技术实现**:
+```javascript
+// content.js:788-828
+showNotification(message, type = 'info', duration = 3000)
+- 支持自定义duration
+- 自动HTML转义防止XSS
+- requestAnimationFrame 优化动画性能
+
+// popup.js:344-415
+同步更新 popup 通知系统
+- 统一视觉风格
+- 类型化错误提示
+```
+
+**CSS更新**:
+```css
+// content.css:560-661
+- 新增 .oal-notification-{type} 类
+- 统一动画关键帧
+- 响应式最大宽度
+- 底部居中定位（更符合现代UI规范）
+```
+
+**使用示例**:
+```javascript
+this.showNotification('操作成功', 'success');
+this.showNotification('文件未找到', 'error');
+this.showNotification('即将过期', 'warning');
+this.showNotification('提示信息', 'info');
+```
+
+### 文件修改统计
+- `content.js`: +100 行（拖拽优化 +75, 通知系统 +40）
+- `content.css`: +110 行（通知样式重构）
+- `popup.js`: +75 行（通知系统改进 +类型化调用）
+
+### 改进效果
+- ✅ 面板永远不会丢失（边界检测）
+- ✅ 位置偏好自动保存（用户体验）
+- ✅ 错误信息更清晰（类型区分）
+- ✅ 通知更加美观（渐变 + 动画）
+- ✅ 交互反馈更即时（视觉提示）
+
 ---
 
 ## [2.0.0-beta] - 2025-01-17

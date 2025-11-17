@@ -164,33 +164,84 @@ class OpenAllLinksManager {
     let isDragging = false;
     let startX, startY, startLeft, startTop;
 
+    // 恢复上次保存的位置
+    this.restorePanelPosition();
+
     header.addEventListener('mousedown', (e) => {
+      // 只在未固定时允许拖拽
+      if (this.isPanelPinned) return;
+
+      // 避免拖拽按钮时触发
+      if (e.target.closest('button')) return;
+
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
       const rect = this.controlPanel.getBoundingClientRect();
       startLeft = rect.left;
       startTop = rect.top;
-      
+
+      // 添加拖拽中的视觉反馈
+      this.controlPanel.style.cursor = 'grabbing';
+      header.style.cursor = 'grabbing';
+
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     });
 
     const onMouseMove = (e) => {
       if (!isDragging) return;
-      
+
       const deltaX = e.clientX - startX;
       const deltaY = e.clientY - startY;
-      
-      this.controlPanel.style.left = (startLeft + deltaX) + 'px';
-      this.controlPanel.style.top = (startTop + deltaY) + 'px';
+
+      // 计算新位置
+      let newLeft = startLeft + deltaX;
+      let newTop = startTop + deltaY;
+
+      // 边界检测 - 确保面板不会超出视口
+      const rect = this.controlPanel.getBoundingClientRect();
+      const maxLeft = window.innerWidth - rect.width;
+      const maxTop = window.innerHeight - rect.height;
+
+      // 限制在视口范围内（留10px边距）
+      newLeft = Math.max(10, Math.min(newLeft, maxLeft - 10));
+      newTop = Math.max(10, Math.min(newTop, maxTop - 10));
+
+      this.controlPanel.style.left = newLeft + 'px';
+      this.controlPanel.style.top = newTop + 'px';
+      this.controlPanel.style.right = 'auto';  // 清除right定位
     };
 
     const onMouseUp = () => {
-      isDragging = false;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+      if (isDragging) {
+        isDragging = false;
+
+        // 恢复光标样式
+        this.controlPanel.style.cursor = '';
+        header.style.cursor = '';
+
+        // 保存位置到本地存储
+        const rect = this.controlPanel.getBoundingClientRect();
+        this.saveUserPreference('panelPosition', {
+          left: rect.left + 'px',
+          top: rect.top + 'px'
+        });
+
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
     };
+  }
+
+  // 恢复面板位置
+  restorePanelPosition() {
+    const savedPosition = this.userPreferences.panelPosition;
+    if (savedPosition) {
+      this.controlPanel.style.left = savedPosition.left;
+      this.controlPanel.style.top = savedPosition.top;
+      this.controlPanel.style.right = 'auto';
+    }
   }
 
   changeFilterMode(newMode) {
@@ -734,17 +785,46 @@ class OpenAllLinksManager {
     this.showNotification(`正在打开 ${urls.length} 个链接...`);
   }
 
-  showNotification(message) {
+  showNotification(message, type = 'info', duration = 3000) {
     const notification = document.createElement('div');
-    notification.className = 'oal-notification';
-    notification.textContent = message;
+    notification.className = `oal-notification oal-notification-${type}`;
+
+    // 图标映射
+    const icons = {
+      success: '✓',
+      error: '✕',
+      warning: '⚠',
+      info: 'ℹ'
+    };
+
+    notification.innerHTML = `
+      <span class="oal-notification-icon">${icons[type] || icons.info}</span>
+      <span class="oal-notification-message">${this.escapeHtml(message)}</span>
+    `;
+
     document.body.appendChild(notification);
 
+    // 淡入动画
+    requestAnimationFrame(() => {
+      notification.style.animation = 'oal-fade-in 0.3s ease-out forwards';
+    });
+
+    // 自动消失
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 3000);
+      notification.style.animation = 'oal-fade-out 0.3s ease-out forwards';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, duration);
+  }
+
+  // HTML转义辅助方法
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   hideControlPanel() {
