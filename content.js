@@ -6,10 +6,13 @@ class OpenAllLinksManager {
     this.isActive = false;
     this.linkCheckboxes = new Map();
     this.classifier = new LinkClassifier();
+    this.grouper = new LinkGrouper(); // 添加分组器
     this.filterMode = 'smart'; // 'all', 'smart', 'content', 'navigation'
+    this.viewMode = 'list'; // 'list', 'grouped'
     this.userPreferences = {};
     this.isPanelCollapsed = true; // 默认折叠状态
     this.isPanelPinned = false; // 默认未固定
+    this.groupedLinksData = null; // 存储分组数据
     this.init();
   }
 
@@ -65,6 +68,14 @@ class OpenAllLinksManager {
               <option value="navigation">🧭 导航链接</option>
             </select>
           </div>
+
+          <div class="oal-view-section">
+            <label class="oal-view-label">显示模式:</label>
+            <select class="oal-view-select" title="选择显示方式">
+              <option value="list">📋 列表视图</option>
+              <option value="grouped">📊 分组视图</option>
+            </select>
+          </div>
           
           <div class="oal-action-buttons">
             <button class="oal-btn oal-select-all" title="选择所有链接" disabled>
@@ -101,11 +112,15 @@ class OpenAllLinksManager {
 
     document.body.appendChild(this.controlPanel);
     this.bindControlEvents();
-    
-    // 设置默认的过滤模式
+
+    // 设置默认的过滤模式和显示模式
     const filterSelect = this.controlPanel.querySelector('.oal-filter-select');
     filterSelect.value = this.filterMode;
     filterSelect.disabled = true; // 初始状态下禁用
+
+    const viewSelect = this.controlPanel.querySelector('.oal-view-select');
+    viewSelect.value = this.viewMode;
+    viewSelect.disabled = true; // 初始状态下禁用
   }
 
   bindControlEvents() {
@@ -116,7 +131,8 @@ class OpenAllLinksManager {
     const deselectAllBtn = this.controlPanel.querySelector('.oal-deselect-all');
     const openSelectedBtn = this.controlPanel.querySelector('.oal-open-selected');
     const filterSelect = this.controlPanel.querySelector('.oal-filter-select');
-    
+    const viewSelect = this.controlPanel.querySelector('.oal-view-select');
+
     // 面板控制按钮
     const collapseBtn = this.controlPanel.querySelector('.oal-collapse-btn');
     const pinBtn = this.controlPanel.querySelector('.oal-pin-btn');
@@ -129,6 +145,7 @@ class OpenAllLinksManager {
     deselectAllBtn.addEventListener('click', () => this.deselectAllLinks());
     openSelectedBtn.addEventListener('click', () => this.openSelectedLinks());
     filterSelect.addEventListener('change', (e) => this.changeFilterMode(e.target.value));
+    viewSelect.addEventListener('change', (e) => this.changeViewMode(e.target.value));
 
     // 绑定面板控制事件
     collapseBtn.addEventListener('click', () => this.togglePanelCollapse());
@@ -201,6 +218,27 @@ class OpenAllLinksManager {
       currentModeElement.textContent = modeNames[newMode] || '智能推荐';
     }
     
+    this.showNotification(`已切换到: ${modeNames[newMode]}`);
+  }
+
+  // 切换显示模式
+  changeViewMode(newMode) {
+    this.viewMode = newMode;
+
+    // 如果当前处于活动状态，重新应用显示
+    if (this.isActive) {
+      this.removeLinkCheckboxes();
+      this.addLinkCheckboxes();
+    }
+
+    // 保存用户偏好
+    this.saveUserPreference('viewMode', newMode);
+
+    const modeNames = {
+      'list': '📋 列表视图',
+      'grouped': '📊 分组视图'
+    };
+
     this.showNotification(`已切换到: ${modeNames[newMode]}`);
   }
 
@@ -319,15 +357,17 @@ class OpenAllLinksManager {
     const quickOpenBtn = this.controlPanel.querySelector('.oal-quick-open');
     const buttons = this.controlPanel.querySelectorAll('.oal-action-buttons .oal-btn');
     const filterSelect = this.controlPanel.querySelector('.oal-filter-select');
+    const viewSelect = this.controlPanel.querySelector('.oal-view-select');
 
     if (this.isActive) {
       quickToggleBtn.textContent = '关闭选择';
       quickOpenBtn.disabled = false;
       buttons.forEach(btn => btn.disabled = false);
       filterSelect.disabled = false;
+      if (viewSelect) viewSelect.disabled = false;
       this.addLinkCheckboxes();
       this.controlPanel.classList.add('active');
-      
+
       // 自动展开面板以显示更多选项
       if (this.isPanelCollapsed) {
         this.togglePanelCollapse();
@@ -337,6 +377,7 @@ class OpenAllLinksManager {
       quickOpenBtn.disabled = true;
       buttons.forEach(btn => btn.disabled = true);
       filterSelect.disabled = true;
+      if (viewSelect) viewSelect.disabled = true;
       this.removeLinkCheckboxes();
       this.controlPanel.classList.remove('active');
       this.selectedLinks.clear();
@@ -347,15 +388,152 @@ class OpenAllLinksManager {
   addLinkCheckboxes() {
     // 查找所有可能的链接
     const links = this.findAllLinks();
-    
-    links.forEach((link, index) => {
-      if (this.linkCheckboxes.has(link)) return; // 避免重复添加
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'oal-link-checkbox';
-      checkbox.dataset.linkIndex = index;
-      
+    if (this.viewMode === 'grouped') {
+      // 分组显示模式
+      this.displayGroupedView(links);
+    } else {
+      // 列表显示模式（原有逻辑）
+      links.forEach((link, index) => {
+        if (this.linkCheckboxes.has(link)) return; // 避免重复添加
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'oal-link-checkbox';
+        checkbox.dataset.linkIndex = index;
+
+        checkbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            this.selectedLinks.add(link);
+          } else {
+            this.selectedLinks.delete(link);
+          }
+          this.updateUI();
+        });
+
+        // 尝试在链接前面插入复选框
+        this.insertCheckboxNearLink(link, checkbox);
+        this.linkCheckboxes.set(link, checkbox);
+
+        // 为链接添加预览功能
+        this.setupLinkPreview(link);
+      });
+    }
+
+    this.updateStats(links.length);
+  }
+
+  // 分组显示视图
+  displayGroupedView(links) {
+    // 使用 LinkGrouper 对链接进行分组
+    this.groupedLinksData = this.grouper.groupLinks(links);
+
+    // 创建分组显示容器
+    let groupContainer = document.querySelector('.oal-grouped-container');
+    if (!groupContainer) {
+      groupContainer = document.createElement('div');
+      groupContainer.className = 'oal-grouped-container';
+
+      // 插入到控制面板的统计部分之后
+      const statsSection = this.controlPanel.querySelector('.oal-stats');
+      statsSection.after(groupContainer);
+    } else {
+      groupContainer.innerHTML = '';
+    }
+
+    // 生成分组HTML
+    Object.keys(this.groupedLinksData).forEach(groupKey => {
+      const group = this.groupedLinksData[groupKey];
+      if (group.count === 0) return;
+
+      const groupElement = document.createElement('div');
+      groupElement.className = 'oal-group';
+      groupElement.dataset.groupKey = groupKey;
+
+      groupElement.innerHTML = `
+        <div class="oal-group-header">
+          <div class="oal-group-header-left">
+            <span class="oal-group-expand">▼</span>
+            <span class="oal-group-icon">${group.icon}</span>
+            <span class="oal-group-name">${group.name}</span>
+            <span class="oal-group-count">(${group.count})</span>
+          </div>
+          <div class="oal-group-header-right">
+            <button class="oal-group-select-all" title="选择本组全部">全选</button>
+            <button class="oal-group-deselect-all" title="取消本组选择">取消</button>
+          </div>
+        </div>
+        <div class="oal-group-links">
+          ${group.links.map((link, index) => {
+            const linkText = link.textContent.trim();
+            const linkHref = link.href;
+            return `
+              <div class="oal-group-link-item" data-link-index="${index}">
+                <input type="checkbox" class="oal-group-checkbox">
+                <a href="${linkHref}" target="_blank" class="oal-group-link-text" title="${linkText}">
+                  ${linkText}
+                </a>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      groupContainer.appendChild(groupElement);
+
+      // 绑定分组事件
+      this.bindGroupEvents(groupElement, group);
+    });
+
+    // 添加分组统计信息
+    const stats = this.grouper.getGroupStatistics(this.groupedLinksData);
+    this.displayGroupStatistics(stats, groupContainer);
+  }
+
+  // 绑定分组相关事件
+  bindGroupEvents(groupElement, group) {
+    const groupKey = groupElement.dataset.groupKey;
+
+    // 展开/折叠
+    const header = groupElement.querySelector('.oal-group-header-left');
+    const expandIcon = groupElement.querySelector('.oal-group-expand');
+    const linksContainer = groupElement.querySelector('.oal-group-links');
+
+    header.addEventListener('click', () => {
+      const isExpanded = groupElement.classList.toggle('oal-group-collapsed');
+      expandIcon.textContent = isExpanded ? '▶' : '▼';
+    });
+
+    // 全选本组
+    const selectAllBtn = groupElement.querySelector('.oal-group-select-all');
+    selectAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      group.links.forEach((link, index) => {
+        this.selectedLinks.add(link);
+        const checkbox = groupElement.querySelector(`.oal-group-link-item[data-link-index="${index}"] input`);
+        if (checkbox) checkbox.checked = true;
+      });
+      this.updateUI();
+    });
+
+    // 取消本组选择
+    const deselectAllBtn = groupElement.querySelector('.oal-group-deselect-all');
+    deselectAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      group.links.forEach((link, index) => {
+        this.selectedLinks.delete(link);
+        const checkbox = groupElement.querySelector(`.oal-group-link-item[data-link-index="${index}"] input`);
+        if (checkbox) checkbox.checked = false;
+      });
+      this.updateUI();
+    });
+
+    // 单个链接选择
+    const linkItems = groupElement.querySelectorAll('.oal-group-link-item');
+    linkItems.forEach((item, index) => {
+      const checkbox = item.querySelector('input');
+      const link = group.links[index];
+
       checkbox.addEventListener('change', (e) => {
         if (e.target.checked) {
           this.selectedLinks.add(link);
@@ -365,15 +543,37 @@ class OpenAllLinksManager {
         this.updateUI();
       });
 
-      // 尝试在链接前面插入复选框
-      this.insertCheckboxNearLink(link, checkbox);
+      // 保存checkbox引用
       this.linkCheckboxes.set(link, checkbox);
-
-      // 为链接添加预览功能
-      this.setupLinkPreview(link);
     });
+  }
 
-    this.updateStats(links.length);
+  // 显示分组统计
+  displayGroupStatistics(stats, container) {
+    let statsElement = container.querySelector('.oal-group-stats');
+    if (!statsElement) {
+      statsElement = document.createElement('div');
+      statsElement.className = 'oal-group-stats';
+      container.appendChild(statsElement);
+    }
+
+    statsElement.innerHTML = `
+      <div class="oal-group-stats-header">📊 分组统计</div>
+      <div class="oal-group-stats-summary">
+        共 ${stats.totalGroups} 个分组，${stats.totalLinks} 个链接
+      </div>
+      <div class="oal-group-stats-details">
+        ${Object.keys(stats.groupDetails).map(key => {
+          const detail = stats.groupDetails[key];
+          return `
+            <div class="oal-group-stats-item">
+              <span>${detail.icon} ${detail.name}:</span>
+              <span>${detail.count} (${detail.percentage}%)</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
   findAllLinks() {
@@ -453,6 +653,12 @@ class OpenAllLinksManager {
       }
     });
     this.linkCheckboxes.clear();
+
+    // 移除分组容器（如果存在）
+    const groupContainer = document.querySelector('.oal-grouped-container');
+    if (groupContainer) {
+      groupContainer.remove();
+    }
   }
 
   selectAllLinks() {

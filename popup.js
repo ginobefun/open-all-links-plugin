@@ -10,6 +10,8 @@ class PopupManager {
     this.bindEvents();
     this.updatePageInfo();
     this.updateStats();
+    this.loadHistory();
+    this.loadFavorites();
   }
 
   bindEvents() {
@@ -66,6 +68,15 @@ class PopupManager {
 
     document.getElementById('resetLearning').addEventListener('click', () => {
       this.resetLearningData();
+    });
+
+    // 历史记录和收藏
+    document.getElementById('viewAllHistory').addEventListener('click', () => {
+      this.viewAllHistory();
+    });
+
+    document.getElementById('viewAllFavorites').addEventListener('click', () => {
+      this.viewAllFavorites();
     });
   }
 
@@ -353,6 +364,246 @@ class PopupManager {
         notification.parentNode.removeChild(notification);
       }
     }, 2000);
+  }
+
+  async loadHistory() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'getHistory',
+        limit: 5
+      });
+
+      if (response && response.success && response.history) {
+        this.displayHistory(response.history);
+      } else {
+        document.getElementById('historyList').innerHTML = '<div class="empty-state">暂无历史记录</div>';
+      }
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      document.getElementById('historyList').innerHTML = '<div class="error-state">加载失败</div>';
+    }
+  }
+
+  async loadFavorites() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'getFavorites'
+      });
+
+      if (response && response.success && response.favorites) {
+        this.displayFavorites(response.favorites);
+      } else {
+        document.getElementById('favoritesList').innerHTML = '<div class="empty-state">暂无收藏</div>';
+      }
+    } catch (error) {
+      console.error('Failed to load favorites:', error);
+      document.getElementById('favoritesList').innerHTML = '<div class="error-state">加载失败</div>';
+    }
+  }
+
+  displayHistory(history) {
+    const container = document.getElementById('historyList');
+
+    if (!history || history.length === 0) {
+      container.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+      return;
+    }
+
+    container.innerHTML = history.map(item => `
+      <div class="history-item" data-id="${item.id}">
+        <div class="history-header">
+          <div class="history-title" title="${this.escapeHtml(item.pageTitle)}">${this.escapeHtml(item.pageTitle)}</div>
+          <button class="history-delete" data-id="${item.id}" title="删除">×</button>
+        </div>
+        <div class="history-meta">
+          <span class="history-count">🔗 ${item.linksCount} 个链接</span>
+          <span class="history-time">${this.formatTime(item.timestamp)}</span>
+        </div>
+        ${item.tags && item.tags.length > 0 ? `
+          <div class="history-tags">
+            ${item.tags.map(tag => `<span class="history-tag">${tag}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    // Add click handlers to reopen
+    container.querySelectorAll('.history-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('history-delete')) {
+          this.reopenHistory(item.dataset.id);
+        }
+      });
+    });
+
+    // Add delete handlers
+    container.querySelectorAll('.history-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        await this.deleteHistoryItem(id);
+      });
+    });
+  }
+
+  displayFavorites(favorites) {
+    const container = document.getElementById('favoritesList');
+
+    if (!favorites || favorites.length === 0) {
+      container.innerHTML = '<div class="empty-state">暂无收藏</div>';
+      return;
+    }
+
+    container.innerHTML = favorites.map(fav => `
+      <div class="favorite-item" data-id="${fav.id}">
+        <div class="favorite-header">
+          <div class="favorite-name" title="${this.escapeHtml(fav.name)}">${this.escapeHtml(fav.name)}</div>
+          <button class="favorite-delete" data-id="${fav.id}" title="删除">×</button>
+        </div>
+        <div class="favorite-meta">
+          <span class="favorite-count">🔗 ${fav.links.length} 个链接</span>
+        </div>
+        ${fav.tags && fav.tags.length > 0 ? `
+          <div class="favorite-tags">
+            ${fav.tags.map(tag => `<span class="favorite-tag">${tag}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    // Add click handlers to reopen
+    container.querySelectorAll('.favorite-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('favorite-delete')) {
+          this.reopenFavorite(item.dataset.id);
+        }
+      });
+    });
+
+    // Add delete handlers
+    container.querySelectorAll('.favorite-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        if (confirm('确定要删除这个收藏吗？')) {
+          await this.deleteFavoriteItem(id);
+        }
+      });
+    });
+  }
+
+  async reopenHistory(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'reopenHistory',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification(`已打开 ${response.count} 个链接`);
+        window.close();
+      } else {
+        this.showNotification('重新打开失败');
+      }
+    } catch (error) {
+      console.error('Failed to reopen history:', error);
+      this.showNotification('操作失败');
+    }
+  }
+
+  async reopenFavorite(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'reopenHistory',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification(`已打开 ${response.count} 个链接`);
+        window.close();
+      } else {
+        this.showNotification('打开失败');
+      }
+    } catch (error) {
+      console.error('Failed to reopen favorite:', error);
+      this.showNotification('操作失败');
+    }
+  }
+
+  async deleteHistoryItem(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'deleteHistory',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification('已删除');
+        this.loadHistory();
+      }
+    } catch (error) {
+      console.error('Failed to delete history:', error);
+      this.showNotification('删除失败');
+    }
+  }
+
+  async deleteFavoriteItem(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'deleteFavorite',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification('已删除');
+        this.loadFavorites();
+      }
+    } catch (error) {
+      console.error('Failed to delete favorite:', error);
+      this.showNotification('删除失败');
+    }
+  }
+
+  viewAllHistory() {
+    // Open history management page in new tab
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('history.html')
+    });
+  }
+
+  viewAllFavorites() {
+    // Open favorites management page in new tab
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('favorites.html')
+    });
+  }
+
+  formatTime(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) {
+      return '刚刚';
+    } else if (diff < hour) {
+      return `${Math.floor(diff / minute)} 分钟前`;
+    } else if (diff < day) {
+      return `${Math.floor(diff / hour)} 小时前`;
+    } else if (diff < 7 * day) {
+      return `${Math.floor(diff / day)} 天前`;
+    } else {
+      const date = new Date(timestamp);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 }
 

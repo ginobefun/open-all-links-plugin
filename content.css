@@ -778,3 +778,280 @@
   font-size: 11px;
   font-style: italic;
 }
+
+/* ===== Grouped View Styles ===== */
+
+/* View Mode Section */
+.oal-view-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.oal-view-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.oal-view-select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #e0e6ed;
+  border-radius: 6px;
+  background: white;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.oal-view-select:hover {
+  border-color: #667eea;
+}
+
+.oal-view-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Grouped Container */
+.oal-grouped-container {
+  margin-top: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  border-top: 2px solid #e5e7eb;
+  padding-top: 12px;
+}
+
+.oal-grouped-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.oal-grouped-container::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 3px;
+}
+
+.oal-grouped-container::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.oal-grouped-container::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Group */
+.oal-group {
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.oal-group:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.oal-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Group Header */
+.oal-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.oal-group-header:hover {
+  background: linear-gradient(135deg, #f3f4f6 0%, #f9fafb 100%);
+}
+
+.oal-group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.oal-group-expand {
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.oal-group-icon {
+  font-size: 16px;
+}
+
+.oal-group-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.oal-group-count {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.oal-group-header-right {
+  display: flex;
+  gap: 4px;
+}
+
+.oal-group-select-all,
+.oal-group-deselect-all {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: white;
+  color: #6b7280;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.oal-group-select-all:hover {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+}
+
+.oal-group-deselect-all:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+/* Group Links */
+.oal-group-links {
+  padding: 8px;
+  background: white;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.oal-group-links::-webkit-scrollbar {
+  width: 4px;
+}
+
+.oal-group-links::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.oal-group-links::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+/* Collapsed State */
+.oal-group-collapsed .oal-group-links {
+  display: none;
+}
+
+.oal-group-collapsed .oal-group-header {
+  border-bottom: none;
+}
+
+/* Group Link Item */
+.oal-group-link-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.oal-group-link-item:hover {
+  background: #f9fafb;
+}
+
+.oal-group-link-item:last-child {
+  margin-bottom: 0;
+}
+
+.oal-group-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #667eea;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.oal-group-link-text {
+  flex: 1;
+  font-size: 12px;
+  color: #374151;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.oal-group-link-text:hover {
+  color: #667eea;
+  text-decoration: underline;
+}
+
+/* Group Statistics */
+.oal-group-stats {
+  margin-top: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.oal-group-stats-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.oal-group-stats-summary {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.oal-group-stats-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oal-group-stats-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.oal-group-stats-item span:first-child {
+  font-weight: 500;
+}
+
+.oal-group-stats-item span:last-child {
+  color: #667eea;
+  font-weight: 600;
+}

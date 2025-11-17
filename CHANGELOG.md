@@ -1,5 +1,77 @@
 # Open All Links - 更新日志
 
+## [2.1.0-beta] - 2025-01-18
+
+### 🎉 重大UI更新
+
+本次更新完成了 Popup 界面增强和内容分组显示功能！
+
+---
+
+## 新增功能
+
+### 1. Popup 界面增强 ✨ (NEW!)
+**完整的历史和收藏管理界面**
+
+- 📚 **历史记录展示**: Popup 中直接显示最近 5 条操作记录
+- ⭐ **收藏列表**: 快速访问收藏的链接组合
+- 🔄 **一键重新打开**: 点击历史/收藏项快速重新打开链接
+- 🗑️ **快速删除**: 每个项目带有删除按钮
+- 📊 **查看全部**: 跳转到完整的历史/收藏管理页面
+- 🎨 **美观UI**:
+  - 悬停效果和过渡动画
+  - 图标指示器
+  - 标签系统显示
+  - 时间智能格式化（刚刚、X分钟前、X小时前等）
+
+**技术实现**:
+- 更新 `popup.js` (+250 行)
+- 新增方法: `loadHistory()`, `loadFavorites()`, `displayHistory()`, `displayFavorites()`
+- 新增方法: `reopenHistory()`, `reopenFavorite()`, `deleteHistoryItem()`, `deleteFavoriteItem()`
+- 新增方法: `viewAllHistory()`, `viewAllFavorites()`, `formatTime()`, `escapeHtml()`
+- 更新 `popup.html` (+30 行)
+- 更新 `popup.css` (+270 行)
+
+### 2. 内容分组显示 📊 (NEW!)
+**智能链接分组视图**
+
+- 🎯 **视图模式切换**: 列表视图 ↔ 分组视图
+- 📂 **8种分组类型**:
+  - 📰 文章/新闻
+  - 🎥 视频
+  - 📄 文档/PDF
+  - 🖼️ 图片
+  - 📦 下载
+  - 🔗 外部链接
+  - 🏠 内部链接
+  - 📋 其他
+- 🔽 **展开/折叠**: 每个分组可独立展开或折叠
+- ✅ **分组操作**: 每组提供"全选"和"取消"按钮
+- 📊 **统计信息**: 显示每组链接数量和百分比
+- 🎨 **精美样式**: 渐变背景、悬停效果、平滑过渡
+
+**技术实现**:
+- 更新 `content.js` (+200 行)
+  - 添加 `viewMode` 属性和 `LinkGrouper` 实例
+  - 新增 `changeViewMode()` 方法
+  - 新增 `displayGroupedView()` 方法
+  - 新增 `bindGroupEvents()` 方法
+  - 新增 `displayGroupStatistics()` 方法
+  - 修改 `addLinkCheckboxes()` 支持分组视图
+  - 修改 `removeLinkCheckboxes()` 清理分组容器
+  - 修改 `toggleSelectionMode()` 启用视图选择器
+- 更新 `content.css` (+270 行)
+  - 视图模式选择器样式
+  - 分组容器样式
+  - 分组头部样式
+  - 展开/折叠动画
+  - 分组链接项样式
+  - 统计信息样式
+- 更新 `manifest.json`
+  - 添加 `link-grouper.js` 到内容脚本
+
+---
+
 ## [2.0.0-beta] - 2025-01-17
 
 ### 🎉 重大更新
