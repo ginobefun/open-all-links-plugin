@@ -38,6 +38,16 @@ class PopupManager {
       this.saveSetting('maxTabs', value);
     });
 
+    document.getElementById('removeDuplicates').addEventListener('change', (e) => {
+      this.saveSetting('removeDuplicates', e.target.checked);
+    });
+
+    document.getElementById('openDelay').addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      document.getElementById('openDelayValue').textContent = value;
+      this.saveSetting('openDelay', value);
+    });
+
     // Help links
     document.getElementById('helpLink').addEventListener('click', (e) => {
       e.preventDefault();
@@ -65,6 +75,8 @@ class PopupManager {
         openInNewWindow: false,
         limitTabs: true,
         maxTabs: 20,
+        openDelay: 100,
+        removeDuplicates: true,
         enableLearning: true
       });
 
@@ -72,6 +84,9 @@ class PopupManager {
       document.getElementById('limitTabs').checked = settings.limitTabs;
       document.getElementById('maxTabs').value = settings.maxTabs;
       document.getElementById('maxTabsValue').textContent = settings.maxTabs;
+      document.getElementById('removeDuplicates').checked = settings.removeDuplicates;
+      document.getElementById('openDelay').value = settings.openDelay;
+      document.getElementById('openDelayValue').textContent = settings.openDelay;
       document.getElementById('enableLearning').checked = settings.enableLearning;
 
       this.updateMaxTabsState();

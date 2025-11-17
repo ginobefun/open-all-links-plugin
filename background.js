@@ -47,18 +47,25 @@ class BackgroundManager {
       const maxTabs = settings.limitTabs ? settings.maxTabs : urls.length;
       const openInNewWindow = settings.openInNewWindow;
 
+      // 去重处理
+      let processedUrls = urls;
+      if (settings.removeDuplicates) {
+        processedUrls = this.removeDuplicateUrls(urls);
+        console.log(`Removed ${urls.length - processedUrls.length} duplicate URLs`);
+      }
+
       // 限制要打开的链接数量
-      const urlsToOpen = urls.slice(0, maxTabs);
-      const skippedCount = urls.length - urlsToOpen.length;
+      const urlsToOpen = processedUrls.slice(0, maxTabs);
+      const skippedCount = processedUrls.length - urlsToOpen.length;
 
       console.log(`Opening ${urlsToOpen.length} links, skipped ${skippedCount}`);
 
       if (openInNewWindow) {
         // 在新窗口中打开链接
-        await this.openInNewWindow(urlsToOpen);
+        await this.openInNewWindow(urlsToOpen, settings);
       } else {
         // 在新标签页中打开链接
-        await this.openInNewTabs(urlsToOpen, tabId);
+        await this.openInNewTabs(urlsToOpen, tabId, settings);
       }
 
       // 发送完成通知给content script
@@ -70,16 +77,50 @@ class BackgroundManager {
     }
   }
 
-  async openInNewTabs(urls, sourceTabId) {
-    const delay = 100; // 延迟100ms避免过快创建标签页
-    
+  // 去重 URL 列表
+  removeDuplicateUrls(urls) {
+    const uniqueUrls = new Set();
+    const result = [];
+
+    for (const url of urls) {
+      try {
+        // 标准化 URL（移除尾部斜杠、查询参数等）
+        const normalized = this.normalizeUrl(url);
+        if (!uniqueUrls.has(normalized)) {
+          uniqueUrls.add(normalized);
+          result.push(url); // 保留原始 URL
+        }
+      } catch (e) {
+        // 如果 URL 解析失败，仍然添加（避免丢失）
+        result.push(url);
+      }
+    }
+
+    return result;
+  }
+
+  // 标准化 URL 用于去重比较
+  normalizeUrl(urlString) {
+    const url = new URL(urlString);
+    // 移除尾部斜杠
+    let pathname = url.pathname.replace(/\/$/, '');
+    // 移除常见的追踪参数
+    const paramsToRemove = ['utm_source', 'utm_medium', 'utm_campaign', 'ref', 'source'];
+    paramsToRemove.forEach(param => url.searchParams.delete(param));
+
+    return `${url.origin}${pathname}${url.search}`;
+  }
+
+  async openInNewTabs(urls, sourceTabId, settings) {
+    const delay = settings.openDelay || 100; // 使用用户设置的延迟时间
+
     for (let i = 0; i < urls.length; i++) {
       try {
         await chrome.tabs.create({
           url: urls[i],
           active: false // 在后台打开
         });
-        
+
         // 添加延迟避免浏览器限制
         if (i < urls.length - 1) {
           await this.sleep(delay);
@@ -90,7 +131,7 @@ class BackgroundManager {
     }
   }
 
-  async openInNewWindow(urls) {
+  async openInNewWindow(urls, settings) {
     try {
       // 创建新窗口并打开第一个链接
       const window = await chrome.windows.create({
@@ -100,7 +141,7 @@ class BackgroundManager {
 
       // 在新窗口中打开其余链接
       const remainingUrls = urls.slice(1);
-      const delay = 100;
+      const delay = settings.openDelay || 100;
 
       for (let i = 0; i < remainingUrls.length; i++) {
         try {
@@ -120,7 +161,7 @@ class BackgroundManager {
     } catch (error) {
       console.error('Failed to create new window:', error);
       // 回退到在当前窗口打开
-      await this.openInNewTabs(urls);
+      await this.openInNewTabs(urls, null, settings);
     }
   }
 
@@ -140,14 +181,20 @@ class BackgroundManager {
       return await chrome.storage.sync.get({
         openInNewWindow: false,
         limitTabs: true,
-        maxTabs: 20
+        maxTabs: 20,
+        openDelay: 100,           // 打开链接的延迟时间（毫秒）
+        removeDuplicates: true,   // 是否去除重复链接
+        enableLearning: true      // 是否启用智能学习
       });
     } catch (error) {
       console.error('Failed to get settings:', error);
       return {
         openInNewWindow: false,
         limitTabs: true,
-        maxTabs: 20
+        maxTabs: 20,
+        openDelay: 100,
+        removeDuplicates: true,
+        enableLearning: true
       };
     }
   }
@@ -158,12 +205,15 @@ class BackgroundManager {
 
   handleInstall() {
     console.log('Open All Links extension installed');
-    
+
     // 设置默认设置
     chrome.storage.sync.set({
       openInNewWindow: false,
       limitTabs: true,
-      maxTabs: 20
+      maxTabs: 20,
+      openDelay: 100,
+      removeDuplicates: true,
+      enableLearning: true
     });
 
     // 可以选择性地打开欢迎页面
