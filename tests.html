@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open All Links - 单元测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .test-suite {
+      margin: 20px 0;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .test-suite-header {
+      background: #34495e;
+      color: white;
+      padding: 12px 15px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .test-case {
+      padding: 10px 15px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .test-case:last-child {
+      border-bottom: none;
+    }
+    .test-case.pass {
+      background: #d4edda;
+      color: #155724;
+    }
+    .test-case.fail {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .test-case.skip {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .test-name {
+      flex: 1;
+    }
+    .test-status {
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .pass .test-status {
+      background: #28a745;
+      color: white;
+    }
+    .fail .test-status {
+      background: #dc3545;
+      color: white;
+    }
+    .skip .test-status {
+      background: #ffc107;
+      color: #333;
+    }
+    .summary {
+      background: #ecf0f1;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      text-align: center;
+    }
+    .summary-item {
+      padding: 10px;
+      border-radius: 4px;
+      background: white;
+    }
+    .summary-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .summary-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .total { color: #34495e; }
+    .passed { color: #28a745; }
+    .failed { color: #dc3545; }
+    .skipped { color: #ffc107; }
+    .error-message {
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 8px;
+      background: rgba(0,0,0,0.05);
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .run-button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .run-button:hover {
+      background: #2980b9;
+    }
+    .run-button:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Open All Links 单元测试</h1>
+
+    <button id="runTests" class="run-button">运行所有测试</button>
+
+    <div class="summary">
+      <div class="summary-item">
+        <div class="summary-label">Total</div>
+        <div class="summary-value total" id="totalTests">0</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Passed</div>
+        <div class="summary-value passed" id="passedTests">0</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Failed</div>
+        <div class="summary-value failed" id="failedTests">0</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Skipped</div>
+        <div class="summary-value skipped" id="skippedTests">0</div>
+      </div>
+    </div>
+
+    <div id="testResults"></div>
+  </div>
+
+  <!-- 加载 LinkClassifier -->
+  <script src="link-classifier.js"></script>
+
+  <script>
+    // 简单的测试框架
+    class TestRunner {
+      constructor() {
+        this.suites = [];
+        this.results = {
+          total: 0,
+          passed: 0,
+          failed: 0,
+          skipped: 0
+        };
+      }
+
+      describe(suiteName, callback) {
+        const suite = {
+          name: suiteName,
+          tests: []
+        };
+
+        const it = (testName, testFn, skip = false) => {
+          suite.tests.push({
+            name: testName,
+            fn: testFn,
+            skip: skip
+          });
+        };
+
+        const xit = (testName, testFn) => {
+          it(testName, testFn, true);
+        };
+
+        callback(it, xit);
+        this.suites.push(suite);
+      }
+
+      async run() {
+        this.results = { total: 0, passed: 0, failed: 0, skipped: 0 };
+        const resultsContainer = document.getElementById('testResults');
+        resultsContainer.innerHTML = '';
+
+        for (const suite of this.suites) {
+          const suiteElement = this.createSuiteElement(suite);
+          resultsContainer.appendChild(suiteElement);
+
+          const testListElement = document.createElement('div');
+          suiteElement.appendChild(testListElement);
+
+          for (const test of suite.tests) {
+            this.results.total++;
+
+            if (test.skip) {
+              this.results.skipped++;
+              testListElement.appendChild(this.createTestElement(test.name, 'skip'));
+              continue;
+            }
+
+            try {
+              await test.fn();
+              this.results.passed++;
+              testListElement.appendChild(this.createTestElement(test.name, 'pass'));
+            } catch (error) {
+              this.results.failed++;
+              testListElement.appendChild(this.createTestElement(test.name, 'fail', error.message));
+            }
+          }
+        }
+
+        this.updateSummary();
+      }
+
+      createSuiteElement(suite) {
+        const element = document.createElement('div');
+        element.className = 'test-suite';
+        element.innerHTML = `
+          <div class="test-suite-header">
+            <span>${suite.name}</span>
+            <span>${suite.tests.length} tests</span>
+          </div>
+        `;
+        return element;
+      }
+
+      createTestElement(name, status, error = null) {
+        const element = document.createElement('div');
+        element.className = `test-case ${status}`;
+
+        const statusText = {
+          'pass': '✓ PASS',
+          'fail': '✗ FAIL',
+          'skip': '○ SKIP'
+        }[status];
+
+        element.innerHTML = `
+          <div class="test-name">${name}</div>
+          <div class="test-status">${statusText}</div>
+        `;
+
+        if (error) {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          errorDiv.textContent = error;
+          element.appendChild(errorDiv);
+        }
+
+        return element;
+      }
+
+      updateSummary() {
+        document.getElementById('totalTests').textContent = this.results.total;
+        document.getElementById('passedTests').textContent = this.results.passed;
+        document.getElementById('failedTests').textContent = this.results.failed;
+        document.getElementById('skippedTests').textContent = this.results.skipped;
+      }
+    }
+
+    // 断言工具
+    const assert = {
+      equal(actual, expected, message) {
+        if (actual !== expected) {
+          throw new Error(message || `Expected ${expected}, but got ${actual}`);
+        }
+      },
+      true(value, message) {
+        if (value !== true) {
+          throw new Error(message || `Expected true, but got ${value}`);
+        }
+      },
+      false(value, message) {
+        if (value !== false) {
+          throw new Error(message || `Expected false, but got ${value}`);
+        }
+      },
+      includes(array, value, message) {
+        if (!array.includes(value)) {
+          throw new Error(message || `Expected array to include ${value}`);
+        }
+      },
+      greaterThan(actual, expected, message) {
+        if (actual <= expected) {
+          throw new Error(message || `Expected ${actual} to be greater than ${expected}`);
+        }
+      },
+      lessThan(actual, expected, message) {
+        if (actual >= expected) {
+          throw new Error(message || `Expected ${actual} to be less than ${expected}`);
+        }
+      }
+    };
+
+    // 创建测试运行器
+    const runner = new TestRunner();
+
+    // LinkClassifier 测试套件
+    runner.describe('LinkClassifier - 基本功能', (it, xit) => {
+      it('应该正确初始化', () => {
+        const classifier = new LinkClassifier();
+        assert.true(classifier !== null, 'Classifier should be initialized');
+        assert.true(typeof classifier.siteRules === 'object', 'Site rules should be an object');
+        assert.true(typeof classifier.commonPatterns === 'object', 'Common patterns should be an object');
+      });
+
+      it('应该包含通用规则', () => {
+        const classifier = new LinkClassifier();
+        const rules = classifier.getCurrentSiteRules();
+        assert.true(rules.contentSelectors.length > 0, 'Should have content selectors');
+        assert.true(rules.excludeSelectors.length > 0, 'Should have exclude selectors');
+      });
+
+      it('应该有主页文本模式', () => {
+        const classifier = new LinkClassifier();
+        const rules = classifier.getCurrentSiteRules();
+        assert.true(Array.isArray(rules.homePageTextPatterns), 'Should have homepage patterns');
+        assert.true(rules.homePageTextPatterns.length > 0, 'Homepage patterns should not be empty');
+      });
+    });
+
+    // 主页链接检测测试
+    runner.describe('LinkClassifier - 主页链接检测', (it, xit) => {
+      it('应该识别指向根路径的主页链接', () => {
+        const classifier = new LinkClassifier();
+        const link = document.createElement('a');
+        link.href = window.location.origin + '/';
+        link.textContent = '首页';
+        document.body.appendChild(link);
+
+        const rules = classifier.getCurrentSiteRules();
+        const isHomepage = classifier.isHomepageLink(link, rules);
+
+        document.body.removeChild(link);
+        assert.true(isHomepage, 'Should detect homepage link');
+      });
+
+      it('应该识别主页文本模式', () => {
+        const classifier = new LinkClassifier();
+        const link = document.createElement('a');
+        link.href = window.location.origin + '/some-page';
+        link.textContent = '首页';
+        document.body.appendChild(link);
+
+        const rules = classifier.getCurrentSiteRules();
+        const isHomepage = classifier.isHomepageLink(link, rules);
+
+        document.body.removeChild(link);
+        assert.true(isHomepage, 'Should detect homepage by text pattern');
+      });
+
+      it('应该识别 Logo 链接', () => {
+        const classifier = new LinkClassifier();
+        const logoDiv = document.createElement('div');
+        logoDiv.className = 'logo';
+        const link = document.createElement('a');
+        link.href = window.location.origin + '/';
+        link.textContent = 'Site';
+        logoDiv.appendChild(link);
+        document.body.appendChild(logoDiv);
+
+        const rules = classifier.getCurrentSiteRules();
+        const isHomepage = classifier.isHomepageLink(link, rules);
+
+        document.body.removeChild(logoDiv);
+        assert.true(isHomepage, 'Should detect logo link as homepage');
+      });
+
+      it('不应该将普通内容链接标记为主页', () => {
+        const classifier = new LinkClassifier();
+        const link = document.createElement('a');
+        link.href = 'https://example.com/article/how-to-code';
+        link.textContent = '如何编程：完整指南';
+        document.body.appendChild(link);
+
+        const rules = classifier.getCurrentSiteRules();
+        const isHomepage = classifier.isHomepageLink(link, rules);
+
+        document.body.removeChild(link);
+        assert.false(isHomepage, 'Should not detect content link as homepage');
+      });
+    });
+
+    // 链接评分测试
+    runner.describe('LinkClassifier - 链接评分', (it, xit) => {
+      it('应该给标题中的链接更高分数', () => {
+        const classifier = new LinkClassifier();
+        const h2 = document.createElement('h2');
+        const link = document.createElement('a');
+        link.href = 'https://example.com/article-1';
+        link.textContent = '重要文章标题';
+        h2.appendChild(link);
+        document.body.appendChild(h2);
+
+        const score = classifier.calculateLinkScore(link);
+
+        document.body.removeChild(h2);
+        assert.greaterThan(score, 0, 'Link in heading should have positive score');
+      });
+
+      it('应该惩罚过短的文本', () => {
+        const classifier = new LinkClassifier();
+        const link1 = document.createElement('a');
+        link1.href = 'https://example.com/test';
+        link1.textContent = 'Hi';
+        document.body.appendChild(link1);
+
+        const link2 = document.createElement('a');
+        link2.href = 'https://example.com/test';
+        link2.textContent = 'This is a reasonable length title';
+        document.body.appendChild(link2);
+
+        const score1 = classifier.calculateLinkScore(link1);
+        const score2 = classifier.calculateLinkScore(link2);
+
+        document.body.removeChild(link1);
+        document.body.removeChild(link2);
+
+        assert.true(score2 > score1, 'Longer text should score higher');
+      });
+
+      it('应该给列表中的链接加分', () => {
+        const classifier = new LinkClassifier();
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = 'https://example.com/item';
+        link.textContent = '列表项链接';
+        li.appendChild(link);
+        document.body.appendChild(li);
+
+        const score = classifier.calculateLinkScore(link);
+
+        document.body.removeChild(li);
+        assert.greaterThan(score, 0, 'Link in list should have positive score');
+      });
+    });
+
+    // URL 质量检测测试
+    runner.describe('LinkClassifier - URL 质量检测', (it, xit) => {
+      it('应该识别包含追踪参数的 URL', () => {
+        const classifier = new LinkClassifier();
+        const cleanUrl = 'https://example.com/article';
+        const trackedUrl = 'https://example.com/article?utm_source=test&utm_campaign=promo';
+
+        const isCleanQuality = classifier.isQualityUrl(cleanUrl);
+        const isTrackedQuality = classifier.isQualityUrl(trackedUrl);
+
+        assert.true(isCleanQuality, 'Clean URL should be quality');
+        assert.false(isTrackedQuality, 'Tracked URL should not be quality');
+      });
+
+      it('应该处理语义化路径', () => {
+        const classifier = new LinkClassifier();
+        const semanticUrl = 'https://example.com/blog/javascript-tips';
+
+        const isQuality = classifier.isQualityUrl(semanticUrl);
+
+        assert.true(isQuality, 'Semantic URL should be quality');
+      });
+    });
+
+    // BackgroundManager Mock 测试（模拟 Chrome API）
+    runner.describe('BackgroundManager - URL 去重', (it, xit) => {
+      it('应该去除完全相同的 URL', () => {
+        // 创建 mock BackgroundManager
+        const mockManager = {
+          removeDuplicateUrls(urls) {
+            const uniqueUrls = new Set();
+            const result = [];
+            for (const url of urls) {
+              try {
+                const normalized = this.normalizeUrl(url);
+                if (!uniqueUrls.has(normalized)) {
+                  uniqueUrls.add(normalized);
+                  result.push(url);
+                }
+              } catch (e) {
+                result.push(url);
+              }
+            }
+            return result;
+          },
+          normalizeUrl(urlString) {
+            const url = new URL(urlString);
+            let pathname = url.pathname.replace(/\/$/, '');
+            const paramsToRemove = ['utm_source', 'utm_medium', 'utm_campaign', 'ref', 'source'];
+            paramsToRemove.forEach(param => url.searchParams.delete(param));
+            return `${url.origin}${pathname}${url.search}`;
+          }
+        };
+
+        const urls = [
+          'https://example.com/page1',
+          'https://example.com/page1',
+          'https://example.com/page2'
+        ];
+
+        const result = mockManager.removeDuplicateUrls(urls);
+        assert.equal(result.length, 2, 'Should remove duplicate URLs');
+      });
+
+      it('应该标准化 URL 进行去重', () => {
+        const mockManager = {
+          removeDuplicateUrls(urls) {
+            const uniqueUrls = new Set();
+            const result = [];
+            for (const url of urls) {
+              try {
+                const normalized = this.normalizeUrl(url);
+                if (!uniqueUrls.has(normalized)) {
+                  uniqueUrls.add(normalized);
+                  result.push(url);
+                }
+              } catch (e) {
+                result.push(url);
+              }
+            }
+            return result;
+          },
+          normalizeUrl(urlString) {
+            const url = new URL(urlString);
+            let pathname = url.pathname.replace(/\/$/, '');
+            const paramsToRemove = ['utm_source', 'utm_medium', 'utm_campaign', 'ref', 'source'];
+            paramsToRemove.forEach(param => url.searchParams.delete(param));
+            return `${url.origin}${pathname}${url.search}`;
+          }
+        };
+
+        const urls = [
+          'https://example.com/page/',
+          'https://example.com/page',
+          'https://example.com/page?utm_source=test',
+          'https://example.com/other'
+        ];
+
+        const result = mockManager.removeDuplicateUrls(urls);
+        assert.equal(result.length, 2, 'Should normalize and remove duplicates');
+      });
+    });
+
+    // 智能推荐测试
+    runner.describe('LinkClassifier - 智能推荐', (it, xit) => {
+      it('应该返回内容链接列表', () => {
+        const classifier = new LinkClassifier();
+
+        // 创建测试链接
+        const article = document.createElement('article');
+        const link1 = document.createElement('a');
+        link1.href = 'https://example.com/article-1';
+        link1.textContent = '这是一篇文章标题';
+        article.appendChild(link1);
+
+        const nav = document.createElement('nav');
+        const link2 = document.createElement('a');
+        link2.href = '/home';
+        link2.textContent = '首页';
+        nav.appendChild(link2);
+
+        document.body.appendChild(article);
+        document.body.appendChild(nav);
+
+        const allLinks = [link1, link2];
+        const recommended = classifier.getRecommendedLinks(allLinks);
+
+        document.body.removeChild(article);
+        document.body.removeChild(nav);
+
+        assert.true(recommended.length > 0, 'Should return recommended links');
+        assert.includes(recommended, link1, 'Should include content link');
+      });
+
+      it('应该按评分排序推荐链接', () => {
+        const classifier = new LinkClassifier();
+
+        // 创建不同质量的链接
+        const h1 = document.createElement('h1');
+        const highScoreLink = document.createElement('a');
+        highScoreLink.href = 'https://example.com/important';
+        highScoreLink.textContent = '重要文章标题非常详细';
+        h1.appendChild(highScoreLink);
+
+        const div = document.createElement('div');
+        const lowScoreLink = document.createElement('a');
+        lowScoreLink.href = 'https://example.com/less-important';
+        lowScoreLink.textContent = 'Hi';
+        div.appendChild(lowScoreLink);
+
+        document.body.appendChild(h1);
+        document.body.appendChild(div);
+
+        const allLinks = [lowScoreLink, highScoreLink];
+        const recommended = classifier.getRecommendedLinks(allLinks);
+
+        document.body.removeChild(h1);
+        document.body.removeChild(div);
+
+        assert.true(recommended.length === 2, 'Should return both content links');
+      });
+    });
+
+    // 运行测试按钮
+    document.getElementById('runTests').addEventListener('click', async function() {
+      this.disabled = true;
+      this.textContent = '运行中...';
+
+      await runner.run();
+
+      this.disabled = false;
+      this.textContent = '重新运行测试';
+    });
+
+    // 页面加载时自动运行测试
+    window.addEventListener('load', async () => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      document.getElementById('runTests').click();
+    });
+  </script>
+</body>
+</html>

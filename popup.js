@@ -10,6 +10,8 @@ class PopupManager {
     this.bindEvents();
     this.updatePageInfo();
     this.updateStats();
+    this.loadHistory();
+    this.loadFavorites();
   }
 
   bindEvents() {
@@ -38,6 +40,16 @@ class PopupManager {
       this.saveSetting('maxTabs', value);
     });
 
+    document.getElementById('removeDuplicates').addEventListener('change', (e) => {
+      this.saveSetting('removeDuplicates', e.target.checked);
+    });
+
+    document.getElementById('openDelay').addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      document.getElementById('openDelayValue').textContent = value;
+      this.saveSetting('openDelay', value);
+    });
+
     // Help links
     document.getElementById('helpLink').addEventListener('click', (e) => {
       e.preventDefault();
@@ -57,6 +69,15 @@ class PopupManager {
     document.getElementById('resetLearning').addEventListener('click', () => {
       this.resetLearningData();
     });
+
+    // 历史记录和收藏
+    document.getElementById('viewAllHistory').addEventListener('click', () => {
+      this.viewAllHistory();
+    });
+
+    document.getElementById('viewAllFavorites').addEventListener('click', () => {
+      this.viewAllFavorites();
+    });
   }
 
   async loadSettings() {
@@ -65,6 +86,8 @@ class PopupManager {
         openInNewWindow: false,
         limitTabs: true,
         maxTabs: 20,
+        openDelay: 100,
+        removeDuplicates: true,
         enableLearning: true
       });
 
@@ -72,6 +95,9 @@ class PopupManager {
       document.getElementById('limitTabs').checked = settings.limitTabs;
       document.getElementById('maxTabs').value = settings.maxTabs;
       document.getElementById('maxTabsValue').textContent = settings.maxTabs;
+      document.getElementById('removeDuplicates').checked = settings.removeDuplicates;
+      document.getElementById('openDelay').value = settings.openDelay;
+      document.getElementById('openDelayValue').textContent = settings.openDelay;
       document.getElementById('enableLearning').checked = settings.enableLearning;
 
       this.updateMaxTabsState();
@@ -315,29 +341,317 @@ class PopupManager {
     }
   }
 
-  showNotification(message) {
-    // 创建简单的通知提示
+  showNotification(message, type = 'success') {
+    // 创建通知提示
     const notification = document.createElement('div');
+    notification.className = 'popup-notification';
+
+    // 图标和颜色映射
+    const styles = {
+      success: {
+        icon: '✓',
+        bg: 'linear-gradient(135deg, #10b981, #059669)'
+      },
+      error: {
+        icon: '✕',
+        bg: 'linear-gradient(135deg, #ef4444, #dc2626)'
+      },
+      warning: {
+        icon: '⚠',
+        bg: 'linear-gradient(135deg, #f59e0b, #d97706)'
+      },
+      info: {
+        icon: 'ℹ',
+        bg: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+      }
+    };
+
+    const style = styles[type] || styles.info;
+
+    notification.innerHTML = `
+      <span class="notification-icon">${style.icon}</span>
+      <span class="notification-message">${this.escapeHtml(message)}</span>
+    `;
+
     notification.style.cssText = `
       position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #28a745;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: ${style.bg};
       color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 12px;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
       z-index: 10000;
-      animation: fadeInOut 2s ease-in-out;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      backdrop-filter: blur(10px);
+      max-width: 80%;
     `;
-    notification.textContent = message;
+
     document.body.appendChild(notification);
 
+    // 淡入动画
+    requestAnimationFrame(() => {
+      notification.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+      notification.style.opacity = '1';
+    });
+
+    // 自动消失
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(-50%) translateY(-10px)';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
     }, 2000);
+  }
+
+  async loadHistory() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'getHistory',
+        limit: 5
+      });
+
+      if (response && response.success && response.history) {
+        this.displayHistory(response.history);
+      } else {
+        document.getElementById('historyList').innerHTML = '<div class="empty-state">暂无历史记录</div>';
+      }
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      document.getElementById('historyList').innerHTML = '<div class="error-state">加载失败</div>';
+    }
+  }
+
+  async loadFavorites() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'getFavorites'
+      });
+
+      if (response && response.success && response.favorites) {
+        this.displayFavorites(response.favorites);
+      } else {
+        document.getElementById('favoritesList').innerHTML = '<div class="empty-state">暂无收藏</div>';
+      }
+    } catch (error) {
+      console.error('Failed to load favorites:', error);
+      document.getElementById('favoritesList').innerHTML = '<div class="error-state">加载失败</div>';
+    }
+  }
+
+  displayHistory(history) {
+    const container = document.getElementById('historyList');
+
+    if (!history || history.length === 0) {
+      container.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+      return;
+    }
+
+    container.innerHTML = history.map(item => `
+      <div class="history-item" data-id="${item.id}">
+        <div class="history-header">
+          <div class="history-title" title="${this.escapeHtml(item.pageTitle)}">${this.escapeHtml(item.pageTitle)}</div>
+          <button class="history-delete" data-id="${item.id}" title="删除">×</button>
+        </div>
+        <div class="history-meta">
+          <span class="history-count">🔗 ${item.linksCount} 个链接</span>
+          <span class="history-time">${this.formatTime(item.timestamp)}</span>
+        </div>
+        ${item.tags && item.tags.length > 0 ? `
+          <div class="history-tags">
+            ${item.tags.map(tag => `<span class="history-tag">${tag}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    // Add click handlers to reopen
+    container.querySelectorAll('.history-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('history-delete')) {
+          this.reopenHistory(item.dataset.id);
+        }
+      });
+    });
+
+    // Add delete handlers
+    container.querySelectorAll('.history-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        await this.deleteHistoryItem(id);
+      });
+    });
+  }
+
+  displayFavorites(favorites) {
+    const container = document.getElementById('favoritesList');
+
+    if (!favorites || favorites.length === 0) {
+      container.innerHTML = '<div class="empty-state">暂无收藏</div>';
+      return;
+    }
+
+    container.innerHTML = favorites.map(fav => `
+      <div class="favorite-item" data-id="${fav.id}">
+        <div class="favorite-header">
+          <div class="favorite-name" title="${this.escapeHtml(fav.name)}">${this.escapeHtml(fav.name)}</div>
+          <button class="favorite-delete" data-id="${fav.id}" title="删除">×</button>
+        </div>
+        <div class="favorite-meta">
+          <span class="favorite-count">🔗 ${fav.links.length} 个链接</span>
+        </div>
+        ${fav.tags && fav.tags.length > 0 ? `
+          <div class="favorite-tags">
+            ${fav.tags.map(tag => `<span class="favorite-tag">${tag}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    // Add click handlers to reopen
+    container.querySelectorAll('.favorite-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('favorite-delete')) {
+          this.reopenFavorite(item.dataset.id);
+        }
+      });
+    });
+
+    // Add delete handlers
+    container.querySelectorAll('.favorite-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        if (confirm('确定要删除这个收藏吗？')) {
+          await this.deleteFavoriteItem(id);
+        }
+      });
+    });
+  }
+
+  async reopenHistory(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'reopenHistory',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification(`已打开 ${response.count} 个链接`);
+        window.close();
+      } else {
+        this.showNotification('重新打开失败');
+      }
+    } catch (error) {
+      console.error('Failed to reopen history:', error);
+      this.showNotification('操作失败', 'error');
+    }
+  }
+
+  async reopenFavorite(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'reopenHistory',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification(`已打开 ${response.count} 个链接`, 'success');
+        window.close();
+      } else {
+        this.showNotification('打开失败', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to reopen favorite:', error);
+      this.showNotification('操作失败', 'error');
+    }
+  }
+
+  async deleteHistoryItem(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'deleteHistory',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification('已删除', 'success');
+        this.loadHistory();
+      }
+    } catch (error) {
+      console.error('Failed to delete history:', error);
+      this.showNotification('删除失败', 'error');
+    }
+  }
+
+  async deleteFavoriteItem(id) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'deleteFavorite',
+        id: id
+      });
+
+      if (response && response.success) {
+        this.showNotification('已删除', 'success');
+        this.loadFavorites();
+      }
+    } catch (error) {
+      console.error('Failed to delete favorite:', error);
+      this.showNotification('删除失败', 'error');
+    }
+  }
+
+  viewAllHistory() {
+    // Open history management page in new tab
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('history.html')
+    });
+  }
+
+  viewAllFavorites() {
+    // Open favorites management page in new tab
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('favorites.html')
+    });
+  }
+
+  formatTime(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) {
+      return '刚刚';
+    } else if (diff < hour) {
+      return `${Math.floor(diff / minute)} 分钟前`;
+    } else if (diff < day) {
+      return `${Math.floor(diff / hour)} 小时前`;
+    } else if (diff < 7 * day) {
+      return `${Math.floor(diff / day)} 天前`;
+    } else {
+      const date = new Date(timestamp);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 }
 

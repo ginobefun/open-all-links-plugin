@@ -73,6 +73,21 @@
         </div>
         <div class="setting-item">
           <label class="setting-label">
+            <input type="checkbox" id="removeDuplicates" checked>
+            <span class="checkmark"></span>
+            自动去除重复链接
+          </label>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">
+            打开延迟时间（毫秒）:
+            <input type="range" id="openDelay" min="50" max="500" step="50" value="100" class="range-input">
+            <span id="openDelayValue">100</span>
+          </label>
+          <small class="setting-hint">降低延迟可以更快打开，但可能被浏览器限制</small>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label">
             <input type="checkbox" id="enableLearning" checked>
             <span class="checkmark"></span>
             启用智能学习（记住选择偏好）
@@ -85,7 +100,27 @@
           </button>
         </div>
       </div>
-      
+
+      <div class="history-section">
+        <h3>
+          📚 最近操作
+          <button id="viewAllHistory" class="view-all-btn">查看全部</button>
+        </h3>
+        <div id="historyList" class="history-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+
+      <div class="favorites-section">
+        <h3>
+          ⭐ 我的收藏
+          <button id="viewAllFavorites" class="view-all-btn">查看全部</button>
+        </h3>
+        <div id="favoritesList" class="favorites-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+
       <div class="help-section">
         <details>
           <summary>使用说明</summary>
@@ -96,6 +131,44 @@
               <li>选择要打开的链接</li>
               <li>点击"打开选中"批量打开链接</li>
             </ol>
+          </div>
+        </details>
+      </div>
+
+      <div class="shortcuts-section">
+        <details>
+          <summary>⌨️ 键盘快捷键</summary>
+          <div class="shortcuts-content">
+            <div class="shortcut-item">
+              <div class="shortcut-keys">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd>
+              </div>
+              <div class="shortcut-desc">切换选择模式</div>
+            </div>
+            <div class="shortcut-item">
+              <div class="shortcut-keys">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd>
+              </div>
+              <div class="shortcut-desc">全选链接</div>
+            </div>
+            <div class="shortcut-item">
+              <div class="shortcut-keys">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd>
+              </div>
+              <div class="shortcut-desc">打开选中链接</div>
+            </div>
+            <div class="shortcut-item">
+              <div class="shortcut-keys">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd>
+              </div>
+              <div class="shortcut-desc">折叠/展开面板</div>
+            </div>
+            <div class="shortcut-item">
+              <div class="shortcut-keys">
+                <kbd>Esc</kbd>
+              </div>
+              <div class="shortcut-desc">关闭面板</div>
+            </div>
           </div>
         </details>
       </div>

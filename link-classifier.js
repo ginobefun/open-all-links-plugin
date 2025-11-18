@@ -33,7 +33,12 @@ class LinkClassifier {
           '.breadcrumb a[href]',
           '.pagination a[href]',
           '.social a[href]',
-          '.share a[href]'
+          '.share a[href]',
+          '.logo a[href]',
+          '.brand a[href]',
+          '.site-logo a[href]',
+          '.top-nav a[href]',
+          '.main-nav a[href]'
         ],
         excludePatterns: [
           /^#/, // 锚点链接
@@ -41,6 +46,19 @@ class LinkClassifier {
           /mailto:/i,
           /tel:/i,
           /^\/\/(www\.)?(login|register|logout|signin|signup)/i
+        ],
+        // 主页文本模式（用于识别主页链接）
+        homePageTextPatterns: [
+          /^首页$/i,
+          /^主页$/i,
+          /^home$/i,
+          /^homepage$/i,
+          /^index$/i,
+          /^回到首页$/i,
+          /^返回首页$/i,
+          /^back to home$/i,
+          /^网站首页$/i,
+          /^logo$/i
         ]
       },
 
@@ -218,6 +236,12 @@ class LinkClassifier {
   shouldExcludeLink(link, rules) {
     const href = link.href;
     const element = link;
+    const linkText = link.textContent.trim();
+
+    // 检查是否是主页链接
+    if (this.isHomepageLink(link, rules)) {
+      return true;
+    }
 
     // 检查排除模式
     if (rules.excludePatterns) {
@@ -239,6 +263,64 @@ class LinkClassifier {
           console.warn('Invalid selector:', selector);
         }
       }
+    }
+
+    return false;
+  }
+
+  // 检查是否是主页链接
+  isHomepageLink(link, rules) {
+    const href = link.href;
+    const linkText = link.textContent.trim();
+    const currentOrigin = window.location.origin;
+
+    try {
+      const url = new URL(href);
+
+      // 检查是否是根路径或主页路径
+      const homepagePaths = ['/', '/index.html', '/index.htm', '/home', '/home.html', '/main'];
+      const isRootPath = homepagePaths.includes(url.pathname) || url.pathname === '';
+
+      // 如果指向同一域名的根路径，很可能是主页链接
+      if (url.origin === currentOrigin && isRootPath) {
+        // 进一步检查文本是否匹配主页模式
+        if (rules.homePageTextPatterns) {
+          for (const pattern of rules.homePageTextPatterns) {
+            if (pattern.test(linkText)) {
+              return true;
+            }
+          }
+        }
+
+        // 如果链接文本非常短（1-3个字符）且指向根路径，也可能是 logo
+        if (linkText.length <= 3 && isRootPath) {
+          return true;
+        }
+      }
+
+      // 检查链接文本是否完全匹配主页模式
+      if (rules.homePageTextPatterns) {
+        for (const pattern of rules.homePageTextPatterns) {
+          if (pattern.test(linkText)) {
+            return true;
+          }
+        }
+      }
+
+      // 检查是否在 logo 或 brand 元素内
+      const logoSelectors = ['.logo', '.brand', '.site-logo', '.site-brand', '.header-logo'];
+      for (const selector of logoSelectors) {
+        try {
+          if (link.closest(selector)) {
+            return true;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+    } catch (e) {
+      // URL 解析失败，继续其他检查
     }
 
     return false;
@@ -345,16 +427,122 @@ class LinkClassifier {
   getRecommendedLinks(allLinks) {
     const classified = allLinks.map(link => ({
       element: link,
-      classification: this.classifyLink(link)
+      classification: this.classifyLink(link),
+      score: this.calculateLinkScore(link)
     }));
 
-    // 优先返回内容链接
+    // 过滤出内容链接并按综合得分排序
     const contentLinks = classified
       .filter(item => item.classification.type === 'content')
-      .sort((a, b) => b.classification.confidence - a.classification.confidence)
+      .sort((a, b) => {
+        // 先按分类置信度排序，再按综合得分排序
+        const confidenceDiff = b.classification.confidence - a.classification.confidence;
+        if (Math.abs(confidenceDiff) > 0.1) {
+          return confidenceDiff;
+        }
+        return b.score - a.score;
+      })
       .map(item => item.element);
 
     return contentLinks;
+  }
+
+  // 计算链接的综合得分
+  calculateLinkScore(link) {
+    let score = 0;
+    const text = link.textContent.trim();
+    const href = link.href;
+
+    // 1. 文本长度得分（理想长度 10-100 个字符）
+    if (text.length >= 10 && text.length <= 100) {
+      score += 2;
+    } else if (text.length > 5 && text.length < 200) {
+      score += 1;
+    }
+
+    // 2. 链接位置得分（越靠前的链接得分越高）
+    const position = this.getLinkPosition(link);
+    if (position < 10) {
+      score += 2;
+    } else if (position < 30) {
+      score += 1;
+    }
+
+    // 3. 是否在列表中（列表项通常是内容链接）
+    if (link.closest('li, tr, .item, .card, .list-item')) {
+      score += 2;
+    }
+
+    // 4. 是否在标题标签中
+    if (link.closest('h1, h2, h3, h4')) {
+      score += 3;
+    }
+
+    // 5. 是否有描述性类名
+    const className = link.className.toLowerCase();
+    const descriptiveClasses = ['title', 'heading', 'post', 'article', 'content', 'link', 'item'];
+    if (descriptiveClasses.some(cls => className.includes(cls))) {
+      score += 1;
+    }
+
+    // 6. URL 质量得分
+    if (this.isQualityUrl(href)) {
+      score += 1;
+    }
+
+    // 7. 是否有图片（带图片的链接通常是重要内容）
+    if (link.querySelector('img')) {
+      score += 1;
+    }
+
+    // 8. 惩罚过短的文本
+    if (text.length < 5) {
+      score -= 2;
+    }
+
+    // 9. 惩罚纯数字或特殊字符
+    if (/^[\d\s\-_\.]+$/.test(text)) {
+      score -= 1;
+    }
+
+    return score;
+  }
+
+  // 获取链接在页面中的位置（0-based index）
+  getLinkPosition(link) {
+    const allLinks = Array.from(document.querySelectorAll('a[href]'));
+    return allLinks.indexOf(link);
+  }
+
+  // 判断 URL 是否有较高质量
+  isQualityUrl(href) {
+    try {
+      const url = new URL(href);
+
+      // 排除查询参数过多的 URL
+      const searchParams = new URLSearchParams(url.search);
+      if (searchParams.toString().length > 100) {
+        return false;
+      }
+
+      // 排除包含追踪参数的 URL
+      const trackingParams = ['utm_', 'ref', 'source', 'campaign'];
+      for (const param of trackingParams) {
+        if (url.search.includes(param)) {
+          return false;
+        }
+      }
+
+      // 偏好语义化的 URL 路径
+      const path = url.pathname;
+      if (/\/[a-z0-9\-]+\/[a-z0-9\-]+/.test(path)) {
+        return true;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   // 按类型过滤链接
