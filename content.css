@@ -1,6 +1,29 @@
 /* Open All Links - Content Styles */
 
 /* Theme Variables */
+/* 默认浅色主题 */
+:root {
+  --oal-bg: #ffffff;
+  --oal-text: #1f2937;
+  --oal-border: #e0e6ed;
+  --oal-shadow: rgba(0, 0, 0, 0.1);
+  --oal-panel-bg: #ffffff;
+  --oal-input-bg: #f9fafb;
+}
+
+/* 系统暗色模式偏好检测（仅在未手动设置主题时生效） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-oal-theme]) {
+    --oal-bg: #1f2937;
+    --oal-text: #f9fafb;
+    --oal-border: #374151;
+    --oal-shadow: rgba(0, 0, 0, 0.3);
+    --oal-panel-bg: #1f2937;
+    --oal-input-bg: #374151;
+  }
+}
+
+/* 显式浅色主题 */
 :root[data-oal-theme="light"] {
   --oal-bg: #ffffff;
   --oal-text: #1f2937;
@@ -10,6 +33,7 @@
   --oal-input-bg: #f9fafb;
 }
 
+/* 显式深色主题 */
 :root[data-oal-theme="dark"] {
   --oal-bg: #1f2937;
   --oal-text: #f9fafb;

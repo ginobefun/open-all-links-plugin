@@ -20,6 +20,7 @@ class OpenAllLinksManager {
     this.loadUserPreferences();
     this.createControlPanel();
     this.listenForMessages();
+    this.handleWindowResize();
   }
 
   createControlPanel() {
@@ -168,9 +169,32 @@ class OpenAllLinksManager {
     const header = this.controlPanel.querySelector('.oal-header');
     let isDragging = false;
     let startX, startY, startLeft, startTop;
+    let onMouseMove, onMouseUp;
 
     // 恢复上次保存的位置
     this.restorePanelPosition();
+
+    // 清理函数 - 移除所有拖拽相关的事件监听器
+    const cleanup = () => {
+      if (onMouseMove) {
+        document.removeEventListener('mousemove', onMouseMove);
+        onMouseMove = null;
+      }
+      if (onMouseUp) {
+        document.removeEventListener('mouseup', onMouseUp);
+        onMouseUp = null;
+      }
+      isDragging = false;
+      if (this.controlPanel) {
+        this.controlPanel.style.cursor = '';
+      }
+      if (header) {
+        header.style.cursor = '';
+      }
+    };
+
+    // 存储cleanup函数供destroy方法使用
+    this._dragCleanup = cleanup;
 
     header.addEventListener('mousedown', (e) => {
       // 只在未固定时允许拖拽
@@ -190,53 +214,52 @@ class OpenAllLinksManager {
       this.controlPanel.style.cursor = 'grabbing';
       header.style.cursor = 'grabbing';
 
+      onMouseMove = (e) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        // 计算新位置
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+
+        // 边界检测 - 确保面板不会超出视口
+        const rect = this.controlPanel.getBoundingClientRect();
+        const maxLeft = window.innerWidth - rect.width;
+        const maxTop = window.innerHeight - rect.height;
+
+        // 限制在视口范围内（留10px边距）
+        newLeft = Math.max(10, Math.min(newLeft, maxLeft - 10));
+        newTop = Math.max(10, Math.min(newTop, maxTop - 10));
+
+        this.controlPanel.style.left = newLeft + 'px';
+        this.controlPanel.style.top = newTop + 'px';
+        this.controlPanel.style.right = 'auto';  // 清除right定位
+      };
+
+      onMouseUp = () => {
+        if (isDragging) {
+          isDragging = false;
+
+          // 恢复光标样式
+          this.controlPanel.style.cursor = '';
+          header.style.cursor = '';
+
+          // 保存位置到本地存储
+          const rect = this.controlPanel.getBoundingClientRect();
+          this.saveUserPreference('panelPosition', {
+            left: rect.left + 'px',
+            top: rect.top + 'px'
+          });
+
+          cleanup();
+        }
+      };
+
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     });
-
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-
-      // 计算新位置
-      let newLeft = startLeft + deltaX;
-      let newTop = startTop + deltaY;
-
-      // 边界检测 - 确保面板不会超出视口
-      const rect = this.controlPanel.getBoundingClientRect();
-      const maxLeft = window.innerWidth - rect.width;
-      const maxTop = window.innerHeight - rect.height;
-
-      // 限制在视口范围内（留10px边距）
-      newLeft = Math.max(10, Math.min(newLeft, maxLeft - 10));
-      newTop = Math.max(10, Math.min(newTop, maxTop - 10));
-
-      this.controlPanel.style.left = newLeft + 'px';
-      this.controlPanel.style.top = newTop + 'px';
-      this.controlPanel.style.right = 'auto';  // 清除right定位
-    };
-
-    const onMouseUp = () => {
-      if (isDragging) {
-        isDragging = false;
-
-        // 恢复光标样式
-        this.controlPanel.style.cursor = '';
-        header.style.cursor = '';
-
-        // 保存位置到本地存储
-        const rect = this.controlPanel.getBoundingClientRect();
-        this.saveUserPreference('panelPosition', {
-          left: rect.left + 'px',
-          top: rect.top + 'px'
-        });
-
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      }
-    };
   }
 
   // 恢复面板位置
@@ -853,38 +876,49 @@ class OpenAllLinksManager {
   }
 
   // 进度条管理
-  handleProgressUpdate(data) {
+  handleProgressUpdate(data, operationId) {
     const { current, total, percentage, status } = data;
 
     if (status === 'start') {
-      this.showProgressBar(total);
+      this.showProgressBar(total, operationId);
     } else if (status === 'progress') {
-      this.updateProgressBar(current, total, percentage);
+      this.updateProgressBar(current, total, percentage, operationId);
     } else if (status === 'complete') {
-      this.completeProgressBar();
+      this.completeProgressBar(operationId);
     }
   }
 
-  showProgressBar(total) {
+  showProgressBar(total, operationId) {
     // 移除现有进度条
     const existing = document.getElementById('oal-progress-bar');
     if (existing) {
       existing.remove();
     }
 
+    // 输入验证和sanitization - 防止XSS
+    const sanitizedTotal = Math.max(0, parseInt(total, 10)) || 0;
+
     const progressBar = document.createElement('div');
     progressBar.id = 'oal-progress-bar';
     progressBar.className = 'oal-progress-container';
+    progressBar.setAttribute('role', 'region');
+    progressBar.setAttribute('aria-label', '链接打开进度');
+    // 存储operationId以便后续验证
+    progressBar.dataset.operationId = operationId;
     progressBar.innerHTML = `
       <div class="oal-progress-header">
-        <span class="oal-progress-icon">🚀</span>
-        <span class="oal-progress-text">正在打开链接...</span>
+        <span class="oal-progress-icon" aria-hidden="true">🚀</span>
+        <span class="oal-progress-text" id="oal-progress-label">正在打开链接...</span>
       </div>
-      <div class="oal-progress-bar-track">
+      <div class="oal-progress-bar-track" role="progressbar"
+           aria-labelledby="oal-progress-label"
+           aria-valuenow="0"
+           aria-valuemin="0"
+           aria-valuemax="100">
         <div class="oal-progress-bar-fill" style="width: 0%"></div>
       </div>
-      <div class="oal-progress-stats">
-        <span class="oal-progress-current">0</span> / <span class="oal-progress-total">${total}</span>
+      <div class="oal-progress-stats" aria-live="polite" aria-atomic="true">
+        <span><span class="oal-progress-current">0</span> / <span class="oal-progress-total">${sanitizedTotal}</span></span>
         <span class="oal-progress-percentage">0%</span>
       </div>
     `;
@@ -897,22 +931,52 @@ class OpenAllLinksManager {
     });
   }
 
-  updateProgressBar(current, total, percentage) {
+  updateProgressBar(current, total, percentage, operationId) {
     const progressBar = document.getElementById('oal-progress-bar');
-    if (!progressBar) return;
+    if (!progressBar) {
+      console.warn('Progress bar not found, recreating...');
+      this.showProgressBar(total, operationId);
+      return;
+    }
+
+    // 检查operationId是否匹配 - 防止竞态条件
+    if (operationId && progressBar.dataset.operationId !== String(operationId)) {
+      console.log('Operation ID mismatch, ignoring update');
+      return;
+    }
+
+    // 验证和sanitization
+    const validPercentage = Math.max(0, Math.min(100, percentage));
+    const sanitizedCurrent = Math.max(0, parseInt(current, 10)) || 0;
 
     const fill = progressBar.querySelector('.oal-progress-bar-fill');
+    const track = progressBar.querySelector('.oal-progress-bar-track');
     const currentEl = progressBar.querySelector('.oal-progress-current');
     const percentageEl = progressBar.querySelector('.oal-progress-percentage');
 
-    if (fill) fill.style.width = `${percentage}%`;
-    if (currentEl) currentEl.textContent = current;
-    if (percentageEl) percentageEl.textContent = `${percentage}%`;
+    if (fill) {
+      fill.style.width = `${validPercentage}%`;
+    }
+    if (track) {
+      track.setAttribute('aria-valuenow', validPercentage);
+    }
+    if (currentEl) {
+      currentEl.textContent = sanitizedCurrent;
+    }
+    if (percentageEl) {
+      percentageEl.textContent = `${validPercentage}%`;
+    }
   }
 
-  completeProgressBar() {
+  completeProgressBar(operationId) {
     const progressBar = document.getElementById('oal-progress-bar');
     if (!progressBar) return;
+
+    // 检查operationId是否匹配 - 防止竞态条件
+    if (operationId && progressBar.dataset.operationId !== String(operationId)) {
+      console.log('Operation ID mismatch, ignoring completion');
+      return;
+    }
 
     // 更新文本为完成状态
     const textEl = progressBar.querySelector('.oal-progress-text');
@@ -951,6 +1015,80 @@ class OpenAllLinksManager {
     this.controlPanel.style.display = 'block';
   }
 
+  // 窗口resize处理 - 确保面板始终在视口内
+  handleWindowResize() {
+    let resizeTimeout;
+    this._resizeHandler = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        this.constrainPanelToViewport();
+      }, 250); // 防抖250ms
+    };
+    window.addEventListener('resize', this._resizeHandler);
+  }
+
+  // 约束面板在视口内
+  constrainPanelToViewport() {
+    if (!this.controlPanel) return;
+
+    const rect = this.controlPanel.getBoundingClientRect();
+    let left = rect.left;
+    let top = rect.top;
+    let adjusted = false;
+
+    // 检查是否超出视口
+    if (left + rect.width > window.innerWidth) {
+      left = window.innerWidth - rect.width - 10;
+      adjusted = true;
+    }
+    if (top + rect.height > window.innerHeight) {
+      top = window.innerHeight - rect.height - 10;
+      adjusted = true;
+    }
+    if (left < 10) {
+      left = 10;
+      adjusted = true;
+    }
+    if (top < 10) {
+      top = 10;
+      adjusted = true;
+    }
+
+    // 只在需要调整时更新位置
+    if (adjusted) {
+      this.controlPanel.style.left = left + 'px';
+      this.controlPanel.style.top = top + 'px';
+      this.controlPanel.style.right = 'auto';
+    }
+  }
+
+  // 清理所有资源 - 防止内存泄漏
+  destroy() {
+    // 清理拖拽事件监听器
+    if (this._dragCleanup) {
+      this._dragCleanup();
+      this._dragCleanup = null;
+    }
+
+    // 清理窗口resize监听器
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+      this._resizeHandler = null;
+    }
+
+    // 移除面板DOM元素
+    if (this.controlPanel && this.controlPanel.parentNode) {
+      this.controlPanel.parentNode.removeChild(this.controlPanel);
+      this.controlPanel = null;
+    }
+
+    // 移除进度条
+    const progressBar = document.getElementById('oal-progress-bar');
+    if (progressBar && progressBar.parentNode) {
+      progressBar.parentNode.removeChild(progressBar);
+    }
+  }
+
   listenForMessages() {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       switch (message.action) {
@@ -977,7 +1115,7 @@ class OpenAllLinksManager {
           this.showNotification(message.message);
           break;
         case 'progressUpdate':
-          this.handleProgressUpdate(message.data);
+          this.handleProgressUpdate(message.data, message.operationId);
           break;
         case 'resetLearningData':
           this.resetLearningData();
@@ -1013,9 +1151,49 @@ class OpenAllLinksManager {
     try {
       const hostname = window.location.hostname;
       this.userPreferences[key] = value;
+      const data = JSON.stringify(this.userPreferences);
+
+      // 检查数据大小（localStorage限制通常为5-10MB）
+      if (data.length > 5 * 1024 * 1024) { // 5MB警告
+        console.warn('Preferences data is large, truncating...');
+        // 保留核心偏好设置
+        this.userPreferences = {
+          theme: this.userPreferences.theme,
+          filterMode: this.userPreferences.filterMode,
+          panelCollapsed: this.userPreferences.panelCollapsed,
+          panelPinned: this.userPreferences.panelPinned,
+          panelPosition: this.userPreferences.panelPosition
+        };
+        // 添加新的值
+        this.userPreferences[key] = value;
+      }
+
       localStorage.setItem(`openAllLinks_${hostname}`, JSON.stringify(this.userPreferences));
     } catch (error) {
-      console.warn('Failed to save user preference:', error);
+      if (error.name === 'QuotaExceededError') {
+        console.error('LocalStorage quota exceeded');
+        this.showNotification('存储空间不足，无法保存设置', 'warning');
+
+        // 尝试清理并重试
+        try {
+          localStorage.removeItem(`openAllLinks_${hostname}`);
+          // 只保存最基本的偏好
+          const minimalPrefs = {
+            theme: this.userPreferences.theme,
+            filterMode: this.userPreferences.filterMode
+          };
+          minimalPrefs[key] = value;
+          localStorage.setItem(`openAllLinks_${hostname}`, JSON.stringify(minimalPrefs));
+          this.userPreferences = minimalPrefs;
+          this.showNotification('已清理旧数据并保存', 'info');
+        } catch (retryError) {
+          console.error('Failed to recover from quota error:', retryError);
+          this.showNotification('保存设置失败，请清理浏览器数据', 'error');
+        }
+      } else {
+        console.warn('Failed to save user preference:', error);
+        this.showNotification('保存设置失败', 'error');
+      }
     }
   }
 

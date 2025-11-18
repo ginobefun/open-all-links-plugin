@@ -158,12 +158,15 @@ class BackgroundManager {
   async openInNewTabs(urls, sourceTabId, settings) {
     const delay = settings.openDelay || 100;
     const maxRetries = 3; // 最大重试次数
+    const MAX_RETRY_DELAY = 5000; // 最大重试延迟5秒
     const failedUrls = [];
     const total = urls.length;
+    // 生成唯一的操作ID - 防止多个操作的进度条冲突
+    const operationId = Date.now() + Math.random();
 
     // 发送开始进度通知
     if (sourceTabId && total > 5) {
-      this.sendProgressUpdate(sourceTabId, 0, total, 'start');
+      this.sendProgressUpdate(sourceTabId, 0, total, 'start', operationId);
     }
 
     for (let i = 0; i < urls.length; i++) {
@@ -180,7 +183,7 @@ class BackgroundManager {
 
           // 发送进度更新（每打开一个链接）
           if (sourceTabId && total > 5) {
-            this.sendProgressUpdate(sourceTabId, i + 1, total, 'progress');
+            this.sendProgressUpdate(sourceTabId, i + 1, total, 'progress', operationId);
           }
 
           // 添加延迟避免浏览器限制
@@ -192,8 +195,8 @@ class BackgroundManager {
           console.error(`Failed to open URL ${urls[i]} (attempt ${attempts}/${maxRetries}):`, error);
 
           if (attempts < maxRetries) {
-            // 指数退避策略
-            const retryDelay = delay * Math.pow(2, attempts);
+            // 指数退避策略，但不超过最大延迟
+            const retryDelay = Math.min(delay * Math.pow(2, attempts), MAX_RETRY_DELAY);
             await this.sleep(retryDelay);
           } else {
             // 达到最大重试次数，记录失败的 URL
@@ -208,7 +211,7 @@ class BackgroundManager {
 
     // 发送完成通知
     if (sourceTabId && total > 5) {
-      this.sendProgressUpdate(sourceTabId, total, total, 'complete');
+      this.sendProgressUpdate(sourceTabId, total, total, 'complete', operationId);
     }
 
     // 如果有失败的 URL，显示错误报告
@@ -399,22 +402,38 @@ class BackgroundManager {
   }
 
   // 发送进度更新到 content script
-  sendProgressUpdate(tabId, current, total, status) {
+  async sendProgressUpdate(tabId, current, total, status, operationId) {
+    // 参数验证
+    if (!tabId || tabId < 0) {
+      console.warn('Invalid tabId for progress update');
+      return;
+    }
+
     try {
-      chrome.tabs.sendMessage(tabId, {
+      // 检查tab是否存在
+      const tab = await chrome.tabs.get(tabId);
+      if (!tab) {
+        console.warn('Tab not found for progress update');
+        return;
+      }
+
+      await chrome.tabs.sendMessage(tabId, {
         action: 'progressUpdate',
+        operationId: operationId || Date.now(), // 确保有operationId
         data: {
           current,
           total,
           percentage: Math.round((current / total) * 100),
           status
         }
-      }).catch(error => {
-        // 忽略错误，可能标签页已关闭
-        console.log('Failed to send progress update:', error);
       });
     } catch (error) {
-      console.error('Error sending progress update:', error);
+      // Tab可能已关闭或content script未加载 - 这是预期行为
+      if (error.message && !error.message.includes('Could not establish connection') &&
+          !error.message.includes('No tab with id')) {
+        console.error('Unexpected error sending progress update:', error);
+      }
+      // 静默忽略连接错误
     }
   }
 
