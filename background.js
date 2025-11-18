@@ -159,6 +159,12 @@ class BackgroundManager {
     const delay = settings.openDelay || 100;
     const maxRetries = 3; // 最大重试次数
     const failedUrls = [];
+    const total = urls.length;
+
+    // 发送开始进度通知
+    if (sourceTabId && total > 5) {
+      this.sendProgressUpdate(sourceTabId, 0, total, 'start');
+    }
 
     for (let i = 0; i < urls.length; i++) {
       let success = false;
@@ -171,6 +177,11 @@ class BackgroundManager {
             active: false
           });
           success = true;
+
+          // 发送进度更新（每打开一个链接）
+          if (sourceTabId && total > 5) {
+            this.sendProgressUpdate(sourceTabId, i + 1, total, 'progress');
+          }
 
           // 添加延迟避免浏览器限制
           if (i < urls.length - 1) {
@@ -193,6 +204,11 @@ class BackgroundManager {
           }
         }
       }
+    }
+
+    // 发送完成通知
+    if (sourceTabId && total > 5) {
+      this.sendProgressUpdate(sourceTabId, total, total, 'complete');
     }
 
     // 如果有失败的 URL，显示错误报告
@@ -380,6 +396,26 @@ class BackgroundManager {
 
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // 发送进度更新到 content script
+  sendProgressUpdate(tabId, current, total, status) {
+    try {
+      chrome.tabs.sendMessage(tabId, {
+        action: 'progressUpdate',
+        data: {
+          current,
+          total,
+          percentage: Math.round((current / total) * 100),
+          status
+        }
+      }).catch(error => {
+        // 忽略错误，可能标签页已关闭
+        console.log('Failed to send progress update:', error);
+      });
+    } catch (error) {
+      console.error('Error sending progress update:', error);
+    }
   }
 
   handleInstall() {

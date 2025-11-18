@@ -37,6 +37,9 @@ class OpenAllLinksManager {
           </span>
         </div>
         <div class="oal-header-controls">
+          <button class="oal-theme-btn" title="切换主题">
+            <span class="oal-theme-icon">🌙</span>
+          </button>
           <button class="oal-collapse-btn" title="展开/折叠面板">
             <span class="oal-collapse-icon">▼</span>
           </button>
@@ -134,6 +137,7 @@ class OpenAllLinksManager {
     const viewSelect = this.controlPanel.querySelector('.oal-view-select');
 
     // 面板控制按钮
+    const themeBtn = this.controlPanel.querySelector('.oal-theme-btn');
     const collapseBtn = this.controlPanel.querySelector('.oal-collapse-btn');
     const pinBtn = this.controlPanel.querySelector('.oal-pin-btn');
     const closeBtn = this.controlPanel.querySelector('.oal-close');
@@ -148,6 +152,7 @@ class OpenAllLinksManager {
     viewSelect.addEventListener('change', (e) => this.changeViewMode(e.target.value));
 
     // 绑定面板控制事件
+    themeBtn.addEventListener('click', () => this.toggleTheme());
     collapseBtn.addEventListener('click', () => this.togglePanelCollapse());
     pinBtn.addEventListener('click', () => this.togglePanelPin());
     closeBtn.addEventListener('click', () => this.hideControlPanel());
@@ -314,7 +319,7 @@ class OpenAllLinksManager {
   togglePanelPin() {
     this.isPanelPinned = !this.isPanelPinned;
     const pinIcon = this.controlPanel.querySelector('.oal-pin-icon');
-    
+
     if (this.isPanelPinned) {
       this.controlPanel.classList.add('oal-pinned');
       pinIcon.textContent = '📌';
@@ -324,9 +329,29 @@ class OpenAllLinksManager {
       pinIcon.textContent = '📍';
       this.showNotification('面板已取消固定');
     }
-    
+
     // 保存用户偏好
     this.saveUserPreference('panelPinned', this.isPanelPinned);
+  }
+
+  // 切换主题
+  toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-oal-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    const themeIcon = this.controlPanel.querySelector('.oal-theme-icon');
+
+    document.documentElement.setAttribute('data-oal-theme', newTheme);
+
+    if (newTheme === 'dark') {
+      themeIcon.textContent = '☀️';
+      this.showNotification('已切换到深色模式', 'info');
+    } else {
+      themeIcon.textContent = '🌙';
+      this.showNotification('已切换到浅色模式', 'info');
+    }
+
+    // 保存用户偏好
+    this.saveUserPreference('theme', newTheme);
   }
 
   // 快速打开推荐链接
@@ -827,6 +852,94 @@ class OpenAllLinksManager {
     return div.innerHTML;
   }
 
+  // 进度条管理
+  handleProgressUpdate(data) {
+    const { current, total, percentage, status } = data;
+
+    if (status === 'start') {
+      this.showProgressBar(total);
+    } else if (status === 'progress') {
+      this.updateProgressBar(current, total, percentage);
+    } else if (status === 'complete') {
+      this.completeProgressBar();
+    }
+  }
+
+  showProgressBar(total) {
+    // 移除现有进度条
+    const existing = document.getElementById('oal-progress-bar');
+    if (existing) {
+      existing.remove();
+    }
+
+    const progressBar = document.createElement('div');
+    progressBar.id = 'oal-progress-bar';
+    progressBar.className = 'oal-progress-container';
+    progressBar.innerHTML = `
+      <div class="oal-progress-header">
+        <span class="oal-progress-icon">🚀</span>
+        <span class="oal-progress-text">正在打开链接...</span>
+      </div>
+      <div class="oal-progress-bar-track">
+        <div class="oal-progress-bar-fill" style="width: 0%"></div>
+      </div>
+      <div class="oal-progress-stats">
+        <span class="oal-progress-current">0</span> / <span class="oal-progress-total">${total}</span>
+        <span class="oal-progress-percentage">0%</span>
+      </div>
+    `;
+
+    document.body.appendChild(progressBar);
+
+    // 淡入动画
+    requestAnimationFrame(() => {
+      progressBar.style.animation = 'oal-fade-in 0.3s ease-out forwards';
+    });
+  }
+
+  updateProgressBar(current, total, percentage) {
+    const progressBar = document.getElementById('oal-progress-bar');
+    if (!progressBar) return;
+
+    const fill = progressBar.querySelector('.oal-progress-bar-fill');
+    const currentEl = progressBar.querySelector('.oal-progress-current');
+    const percentageEl = progressBar.querySelector('.oal-progress-percentage');
+
+    if (fill) fill.style.width = `${percentage}%`;
+    if (currentEl) currentEl.textContent = current;
+    if (percentageEl) percentageEl.textContent = `${percentage}%`;
+  }
+
+  completeProgressBar() {
+    const progressBar = document.getElementById('oal-progress-bar');
+    if (!progressBar) return;
+
+    // 更新文本为完成状态
+    const textEl = progressBar.querySelector('.oal-progress-text');
+    if (textEl) {
+      textEl.textContent = '✓ 完成！';
+      textEl.style.color = '#10b981';
+    }
+
+    // 改变图标
+    const iconEl = progressBar.querySelector('.oal-progress-icon');
+    if (iconEl) {
+      iconEl.textContent = '✓';
+    }
+
+    // 1.5秒后淡出移除
+    setTimeout(() => {
+      if (progressBar) {
+        progressBar.style.animation = 'oal-fade-out 0.3s ease-out forwards';
+        setTimeout(() => {
+          if (progressBar.parentNode) {
+            progressBar.parentNode.removeChild(progressBar);
+          }
+        }, 300);
+      }
+    }, 1500);
+  }
+
   hideControlPanel() {
     if (this.isActive) {
       this.toggleSelectionMode();
@@ -863,6 +976,9 @@ class OpenAllLinksManager {
         case 'showNotification':
           this.showNotification(message.message);
           break;
+        case 'progressUpdate':
+          this.handleProgressUpdate(message.data);
+          break;
         case 'resetLearningData':
           this.resetLearningData();
           break;
@@ -882,6 +998,11 @@ class OpenAllLinksManager {
         this.filterMode = this.userPreferences.filterMode || 'smart';
         this.isPanelCollapsed = this.userPreferences.panelCollapsed !== false; // 默认折叠
         this.isPanelPinned = this.userPreferences.panelPinned || false;
+
+        // 恢复主题设置
+        if (this.userPreferences.theme) {
+          document.documentElement.setAttribute('data-oal-theme', this.userPreferences.theme);
+        }
       }
     } catch (error) {
       console.warn('Failed to load user preferences:', error);
