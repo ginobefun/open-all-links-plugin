@@ -411,8 +411,13 @@ class HistoryManager {
 }
 
 // 导出类
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = HistoryManager;
-} else {
-  window.HistoryManager = HistoryManager;
-}
+// 兼容不同环境：Node.js、浏览器、Service Worker
+(function(global) {
+  if (typeof module !== 'undefined' && module.exports) {
+    // Node.js 环境
+    module.exports = HistoryManager;
+  } else {
+    // Service Worker 或浏览器环境
+    global.HistoryManager = HistoryManager;
+  }
+})(typeof self !== 'undefined' ? self : this);

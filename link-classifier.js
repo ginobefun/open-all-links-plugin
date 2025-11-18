@@ -559,8 +559,13 @@ class LinkClassifier {
 }
 
 // 导出类
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = LinkClassifier;
-} else {
-  window.LinkClassifier = LinkClassifier;
-}
+// 兼容不同环境：Node.js、浏览器、Service Worker
+(function(global) {
+  if (typeof module !== 'undefined' && module.exports) {
+    // Node.js 环境
+    module.exports = LinkClassifier;
+  } else {
+    // Service Worker 或浏览器环境
+    global.LinkClassifier = LinkClassifier;
+  }
+})(typeof self !== 'undefined' ? self : this);

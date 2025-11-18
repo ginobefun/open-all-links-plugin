@@ -361,8 +361,13 @@ class LinkGrouper {
 }
 
 // 导出类
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = LinkGrouper;
-} else {
-  window.LinkGrouper = LinkGrouper;
-}
+// 兼容不同环境：Node.js、浏览器、Service Worker
+(function(global) {
+  if (typeof module !== 'undefined' && module.exports) {
+    // Node.js 环境
+    module.exports = LinkGrouper;
+  } else {
+    // Service Worker 或浏览器环境
+    global.LinkGrouper = LinkGrouper;
+  }
+})(typeof self !== 'undefined' ? self : this);
