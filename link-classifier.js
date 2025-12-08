@@ -58,7 +58,29 @@ class LinkClassifier {
           /^返回首页$/i,
           /^back to home$/i,
           /^网站首页$/i,
-          /^logo$/i
+          /^logo$/i,
+          /^home\s*page$/i,
+          /^返回$/i
+        ],
+        // 常见页面文本模式（需要排除的通用页面）
+        commonPageTextPatterns: [
+          /^关于(我们|us)?$/i,
+          /^about(\s*us)?$/i,
+          /^联系(我们|us)?$/i,
+          /^contact(\s*us)?$/i,
+          /^帮助(中心)?$/i,
+          /^help(\s*center)?$/i,
+          /^服务条款$/i,
+          /^terms(\s*of\s*service)?$/i,
+          /^privacy(\s*policy)?$/i,
+          /^隐私政策$/i,
+          /^用户协议$/i,
+          /^反馈$/i,
+          /^feedback$/i,
+          /^更多$/i,
+          /^more$/i,
+          /^全部$/i,
+          /^all$/i
         ]
       },
 
@@ -273,17 +295,79 @@ class LinkClassifier {
     const href = link.href;
     const linkText = link.textContent.trim();
     const currentOrigin = window.location.origin;
+    const currentHostname = window.location.hostname;
 
     try {
       const url = new URL(href);
 
       // 检查是否是根路径或主页路径
-      const homepagePaths = ['/', '/index.html', '/index.htm', '/home', '/home.html', '/main'];
+      const homepagePaths = ['/', '/index.html', '/index.htm', '/home', '/home.html', '/main', '/index.php', '/default.html'];
       const isRootPath = homepagePaths.includes(url.pathname) || url.pathname === '';
 
-      // 如果指向同一域名的根路径，很可能是主页链接
-      if (url.origin === currentOrigin && isRootPath) {
-        // 进一步检查文本是否匹配主页模式
+      // 策略1: 检查是否在 logo、brand 或 header 顶部区域
+      const logoSelectors = [
+        '.logo', '.brand', '.site-logo', '.site-brand', '.header-logo',
+        '.navbar-brand', '.site-title', '.logo-link', '[class*="logo"]',
+        'header a[href="/"]', 'header a[href="' + currentOrigin + '"]'
+      ];
+      for (const selector of logoSelectors) {
+        try {
+          if (link.closest(selector) || link.matches(selector)) {
+            return true;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      // 策略2: 检查域名是否包含管理、控制台等关键词（通常是管理后台首页）
+      const adminDomainPatterns = [
+        /^admin\./i,
+        /^console\./i,
+        /^dashboard\./i,
+        /^manage\./i,
+        /^backend\./i,
+        /^cp\./i,  // control panel
+        /^panel\./i
+      ];
+
+      // 如果是子域名且包含管理关键词，且指向根路径
+      if (url.hostname !== currentHostname && isRootPath) {
+        for (const pattern of adminDomainPatterns) {
+          if (pattern.test(url.hostname)) {
+            return true;
+          }
+        }
+      }
+
+      // 策略3: 检查是否是当前站点的根路径链接
+      // 如果链接指向完全相同的域名和根路径，很可能是首页
+      if (url.hostname === currentHostname && isRootPath) {
+        // 检查是否只包含图片
+        const hasOnlyImage = link.querySelector('img') && !linkText;
+        if (hasOnlyImage) {
+          return true;
+        }
+
+        // 检查文本长度（1-4个字符的通常是logo或站点名缩写）
+        if (linkText.length > 0 && linkText.length <= 4) {
+          return true;
+        }
+
+        // 检查文本是否是站点名称或域名
+        const domainName = currentHostname.split('.')[0];
+        if (linkText.toLowerCase() === domainName.toLowerCase()) {
+          return true;
+        }
+
+        // 如果链接文本包含网站名称且指向首页
+        if (linkText.toLowerCase().includes(domainName) && linkText.length < 20) {
+          return true;
+        }
+      }
+
+      // 策略4: 同域名根路径链接 + 文本匹配主页模式
+      if (url.hostname === currentHostname && isRootPath) {
         if (rules.homePageTextPatterns) {
           for (const pattern of rules.homePageTextPatterns) {
             if (pattern.test(linkText)) {
@@ -291,14 +375,9 @@ class LinkClassifier {
             }
           }
         }
-
-        // 如果链接文本非常短（1-3个字符）且指向根路径，也可能是 logo
-        if (linkText.length <= 3 && isRootPath) {
-          return true;
-        }
       }
 
-      // 检查链接文本是否完全匹配主页模式
+      // 策略5: 检查链接文本是否完全匹配主页模式（不限域名）
       if (rules.homePageTextPatterns) {
         for (const pattern of rules.homePageTextPatterns) {
           if (pattern.test(linkText)) {
@@ -307,16 +386,19 @@ class LinkClassifier {
         }
       }
 
-      // 检查是否在 logo 或 brand 元素内
-      const logoSelectors = ['.logo', '.brand', '.site-logo', '.site-brand', '.header-logo'];
-      for (const selector of logoSelectors) {
-        try {
-          if (link.closest(selector)) {
+      // 策略6: 检查是否是常见通用页面（关于我们、联系我们等）
+      if (rules.commonPageTextPatterns) {
+        for (const pattern of rules.commonPageTextPatterns) {
+          if (pattern.test(linkText)) {
             return true;
           }
-        } catch (e) {
-          continue;
         }
+      }
+
+      // 策略7: 检查URL路径是否是常见的通用页面路径
+      const commonPaths = ['/about', '/contact', '/help', '/terms', '/privacy', '/feedback'];
+      if (commonPaths.some(path => url.pathname.startsWith(path))) {
+        return true;
       }
 
     } catch (e) {

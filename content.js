@@ -33,38 +33,54 @@ class OpenAllLinksManager {
           <span class="oal-logo">🔗</span>
           <span class="oal-title">Open All Links</span>
           <span class="oal-quick-stats">
-            <span class="oal-found-count">0</span> | 
-            <span class="oal-selected-count">0</span>
+            <span class="oal-found-count">0</span> 个链接
           </span>
         </div>
         <div class="oal-header-controls">
           <button class="oal-theme-btn" title="切换主题">
             <span class="oal-theme-icon">🌙</span>
           </button>
-          <button class="oal-collapse-btn" title="展开/折叠面板">
+          <button class="oal-collapse-btn" title="展开/折叠面板 (Ctrl+Shift+C)">
             <span class="oal-collapse-icon">▼</span>
           </button>
           <button class="oal-pin-btn" title="固定/取消固定">
             <span class="oal-pin-icon">📌</span>
           </button>
-          <button class="oal-close" title="关闭面板">×</button>
+          <button class="oal-close" title="关闭面板 (Esc)">×</button>
         </div>
       </div>
       <div class="oal-body">
-        <div class="oal-quick-actions">
-          <button class="oal-btn oal-quick-toggle" title="快速开始选择">
-            <span class="oal-btn-icon">⚡</span>
-            <span class="oal-btn-text">开启选择</span>
+        <!-- 简化的操作区 -->
+        <div class="oal-actions-simple">
+          <button class="oal-action-card oal-smart-open" title="直接打开智能推荐的链接">
+            <div class="oal-action-icon">🚀</div>
+            <div class="oal-action-content">
+              <div class="oal-action-title">智能打开</div>
+              <div class="oal-action-desc">一键打开推荐内容</div>
+            </div>
           </button>
-          <button class="oal-btn oal-quick-open" title="智能打开推荐链接" disabled>
-            <span class="oal-btn-icon">🚀</span>
-            <span class="oal-btn-text">智能打开</span>
+
+          <button class="oal-action-card oal-smart-preview" title="预览并调整选择">
+            <div class="oal-action-icon">👁️</div>
+            <div class="oal-action-content">
+              <div class="oal-action-title">预览选择</div>
+              <div class="oal-action-desc">查看并调整推荐</div>
+            </div>
+          </button>
+
+          <button class="oal-action-card oal-manual-select" title="手动选择链接">
+            <div class="oal-action-icon">✋</div>
+            <div class="oal-action-content">
+              <div class="oal-action-title">手动选择</div>
+              <div class="oal-action-desc">自己勾选链接</div>
+            </div>
           </button>
         </div>
-        
-        <div class="oal-controls">
-          <div class="oal-filter-section">
-            <label class="oal-filter-label">过滤模式:</label>
+
+        <!-- 高级控制区（手动选择时显示） -->
+        <div class="oal-controls" style="display: none;">
+          <div class="oal-filter-row">
+            <label class="oal-filter-label">过滤:</label>
             <select class="oal-filter-select" title="选择要显示的链接类型">
               <option value="smart">🎯 智能推荐</option>
               <option value="content">📄 内容链接</option>
@@ -73,42 +89,22 @@ class OpenAllLinksManager {
             </select>
           </div>
 
-          <div class="oal-view-section">
-            <label class="oal-view-label">显示模式:</label>
-            <select class="oal-view-select" title="选择显示方式">
-              <option value="list">📋 列表视图</option>
-              <option value="grouped">📊 分组视图</option>
-            </select>
-          </div>
-          
           <div class="oal-action-buttons">
-            <button class="oal-btn oal-select-all" title="选择所有链接" disabled>
-              <span class="oal-btn-icon">✅</span>
-              全选
+            <button class="oal-btn oal-select-all" title="全选 (Ctrl+Shift+A)">
+              ✅ 全选
             </button>
-            <button class="oal-btn oal-deselect-all" title="取消所有选择" disabled>
-              <span class="oal-btn-icon">❌</span>
-              取消
-            </button>
-            <button class="oal-btn oal-open-selected oal-primary" title="打开选中的链接" disabled>
-              <span class="oal-btn-icon">🔗</span>
-              打开选中 (<span class="oal-count">0</span>)
+            <button class="oal-btn oal-deselect-all" title="取消选择">
+              ❌ 取消
             </button>
           </div>
-        </div>
-        
-        <div class="oal-stats">
-          <div class="oal-stats-row">
-            <span class="oal-stats-label">发现链接:</span>
-            <span class="oal-stats-value"><span class="oal-total-links">0</span> 个</span>
-          </div>
-          <div class="oal-stats-row">
-            <span class="oal-stats-label">已选择:</span>
-            <span class="oal-stats-value"><span class="oal-selected-links">0</span> 个</span>
-          </div>
-          <div class="oal-stats-row">
-            <span class="oal-stats-label">过滤模式:</span>
-            <span class="oal-stats-value" id="oal-current-mode">智能推荐</span>
+
+          <button class="oal-btn oal-btn-primary oal-open-selected" title="打开选中 (Ctrl+Shift+O)" disabled>
+            <span class="oal-btn-icon">🔗</span>
+            打开选中 (<span class="oal-count">0</span>)
+          </button>
+
+          <div class="oal-stats">
+            <span class="oal-stats-text">已选择 <strong><span class="oal-selected-links">0</span></strong> 个链接</span>
           </div>
         </div>
       </div>
@@ -117,25 +113,22 @@ class OpenAllLinksManager {
     document.body.appendChild(this.controlPanel);
     this.bindControlEvents();
 
-    // 设置默认的过滤模式和显示模式
+    // 设置默认的过滤模式
     const filterSelect = this.controlPanel.querySelector('.oal-filter-select');
-    filterSelect.value = this.filterMode;
-    filterSelect.disabled = true; // 初始状态下禁用
-
-    const viewSelect = this.controlPanel.querySelector('.oal-view-select');
-    viewSelect.value = this.viewMode;
-    viewSelect.disabled = true; // 初始状态下禁用
+    if (filterSelect) {
+      filterSelect.value = this.filterMode;
+    }
   }
 
   bindControlEvents() {
     // 主要功能按钮
-    const quickToggleBtn = this.controlPanel.querySelector('.oal-quick-toggle');
-    const quickOpenBtn = this.controlPanel.querySelector('.oal-quick-open');
+    const smartOpenBtn = this.controlPanel.querySelector('.oal-smart-open');
+    const smartPreviewBtn = this.controlPanel.querySelector('.oal-smart-preview');
+    const manualSelectBtn = this.controlPanel.querySelector('.oal-manual-select');
     const selectAllBtn = this.controlPanel.querySelector('.oal-select-all');
     const deselectAllBtn = this.controlPanel.querySelector('.oal-deselect-all');
     const openSelectedBtn = this.controlPanel.querySelector('.oal-open-selected');
     const filterSelect = this.controlPanel.querySelector('.oal-filter-select');
-    const viewSelect = this.controlPanel.querySelector('.oal-view-select');
 
     // 面板控制按钮
     const themeBtn = this.controlPanel.querySelector('.oal-theme-btn');
@@ -144,13 +137,13 @@ class OpenAllLinksManager {
     const closeBtn = this.controlPanel.querySelector('.oal-close');
 
     // 绑定功能事件
-    quickToggleBtn.addEventListener('click', () => this.toggleSelectionMode());
-    quickOpenBtn.addEventListener('click', () => this.quickOpenRecommended());
+    smartOpenBtn.addEventListener('click', () => this.quickOpenRecommended());
+    smartPreviewBtn.addEventListener('click', () => this.showSmartPreview());
+    manualSelectBtn.addEventListener('click', () => this.toggleManualMode());
     selectAllBtn.addEventListener('click', () => this.selectAllLinks());
     deselectAllBtn.addEventListener('click', () => this.deselectAllLinks());
     openSelectedBtn.addEventListener('click', () => this.openSelectedLinks());
     filterSelect.addEventListener('change', (e) => this.changeFilterMode(e.target.value));
-    viewSelect.addEventListener('change', (e) => this.changeViewMode(e.target.value));
 
     // 绑定面板控制事件
     themeBtn.addEventListener('click', () => this.toggleTheme());
@@ -377,38 +370,269 @@ class OpenAllLinksManager {
     this.saveUserPreference('theme', newTheme);
   }
 
-  // 快速打开推荐链接
+  // 快速打开推荐链接（不预览，直接打开）
   quickOpenRecommended() {
-    if (!this.isActive) {
-      // 如果未激活，先激活选择模式
-      this.toggleSelectionMode();
-    }
-    
-    // 获取智能推荐的链接
-    const recommendedLinks = this.classifier.getRecommendedLinks(
-      Array.from(document.querySelectorAll('a[href]')).filter(link => this.isValidLink(link))
-    );
-    
+    const allLinks = Array.from(document.querySelectorAll('a[href]')).filter(link => this.isValidLink(link));
+    const recommendedLinks = this.classifier.getRecommendedLinks(allLinks);
+
     if (recommendedLinks.length === 0) {
-      this.showNotification('未找到推荐的链接');
+      this.showNotification('未找到推荐的链接', 'warning');
       return;
     }
-    
-    // 自动选择推荐链接
-    recommendedLinks.forEach(link => {
-      this.selectedLinks.add(link);
-      const checkbox = this.linkCheckboxes.get(link);
-      if (checkbox) {
-        checkbox.checked = true;
-      }
+
+    // 准备打开链接
+    const urls = recommendedLinks.map(link => link.href);
+    const pageInfo = {
+      url: window.location.href,
+      title: document.title,
+      filterMode: 'smart'
+    };
+
+    // 发送消息给background script来打开链接
+    chrome.runtime.sendMessage({
+      action: 'openLinks',
+      urls: urls,
+      pageInfo: pageInfo
     });
-    
-    this.updateUI();
-    
-    // 询问是否立即打开
-    if (confirm(`找到 ${recommendedLinks.length} 个推荐链接，是否立即打开？`)) {
-      this.openSelectedLinks();
+
+    this.showNotification(`正在打开 ${urls.length} 个推荐链接...`, 'success');
+  }
+
+  // 显示智能预览对话框
+  showSmartPreview() {
+    // 获取智能推荐的链接
+    const allLinks = Array.from(document.querySelectorAll('a[href]')).filter(link => this.isValidLink(link));
+    const recommendedLinks = this.classifier.getRecommendedLinks(allLinks);
+
+    if (recommendedLinks.length === 0) {
+      this.showNotification('未找到推荐的链接', 'warning');
+      return;
     }
+
+    // 创建预览对话框
+    this.createPreviewDialog(recommendedLinks);
+  }
+
+  // 切换手动选择模式
+  toggleManualMode() {
+    const actionsSimple = this.controlPanel.querySelector('.oal-actions-simple');
+    const controls = this.controlPanel.querySelector('.oal-controls');
+
+    if (!this.isActive) {
+      // 进入手动模式
+      this.isActive = true;
+      actionsSimple.style.display = 'none';
+      controls.style.display = 'block';
+      this.addLinkCheckboxes();
+      this.controlPanel.classList.add('active');
+
+      // 自动展开面板
+      if (this.isPanelCollapsed) {
+        this.togglePanelCollapse();
+      }
+    } else {
+      // 退出手动模式
+      this.isActive = false;
+      actionsSimple.style.display = 'block';
+      controls.style.display = 'none';
+      this.removeLinkCheckboxes();
+      this.controlPanel.classList.remove('active');
+      this.selectedLinks.clear();
+      this.updateUI();
+    }
+  }
+
+  // 创建预览对话框
+  createPreviewDialog(links) {
+    // 移除已存在的预览对话框
+    const existingDialog = document.querySelector('.oal-preview-dialog');
+    if (existingDialog) {
+      existingDialog.remove();
+    }
+
+    // 临时降低控制面板的z-index，让预览对话框显示在最上层
+    if (this.controlPanel) {
+      this.controlPanel.style.zIndex = '2147483640';
+    }
+
+    const dialog = document.createElement('div');
+    dialog.className = 'oal-preview-dialog';
+    dialog.innerHTML = `
+      <div class="oal-preview-overlay"></div>
+      <div class="oal-preview-content">
+        <div class="oal-preview-header">
+          <h3>
+            <span class="oal-preview-icon">🚀</span>
+            智能推荐链接预览
+          </h3>
+          <button class="oal-preview-close" title="关闭">×</button>
+        </div>
+        <div class="oal-preview-info">
+          <p>已为您智能筛选出 <strong>${links.length}</strong> 个内容链接，您可以预览并调整选择：</p>
+        </div>
+        <div class="oal-preview-list">
+          ${links.map((link, index) => {
+            const classification = this.classifier.classifyLink(link);
+            const score = this.classifier.calculateLinkScore(link);
+            const linkText = link.textContent.trim() || '(无标题)';
+            const linkHref = link.href;
+            const domain = new URL(linkHref).hostname;
+
+            return `
+              <div class="oal-preview-item" data-index="${index}">
+                <div class="oal-preview-item-check">
+                  <input type="checkbox" class="oal-preview-checkbox" data-index="${index}" checked>
+                </div>
+                <div class="oal-preview-item-content">
+                  <div class="oal-preview-item-title">${this.escapeHtml(linkText)}</div>
+                  <div class="oal-preview-item-url" title="${this.escapeHtml(linkHref)}">
+                    <span class="oal-preview-domain">${this.escapeHtml(domain)}</span>
+                    <span class="oal-preview-path">${this.escapeHtml(new URL(linkHref).pathname.substring(0, 50))}${new URL(linkHref).pathname.length > 50 ? '...' : ''}</span>
+                  </div>
+                  <div class="oal-preview-item-meta">
+                    <span class="oal-preview-score" title="综合评分">⭐ ${score.toFixed(1)}</span>
+                    <span class="oal-preview-confidence" title="分类置信度">${(classification.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+                <div class="oal-preview-item-actions">
+                  <button class="oal-preview-item-remove" data-index="${index}" title="移除">×</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="oal-preview-footer">
+          <div class="oal-preview-summary">
+            已选中 <strong><span class="oal-preview-count">${links.length}</span></strong> 个链接
+          </div>
+          <div class="oal-preview-actions">
+            <button class="oal-btn oal-preview-cancel">取消</button>
+            <button class="oal-btn-large oal-btn-primary oal-preview-open">
+              打开链接
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 确保插入到body的最顶层
+    document.body.appendChild(dialog);
+
+    // 绑定预览对话框事件
+    this.bindPreviewDialogEvents(dialog, links);
+
+    // 淡入动画
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        dialog.style.opacity = '1';
+        dialog.style.transition = 'opacity 0.3s ease-out';
+      });
+    });
+  }
+
+  // 绑定预览对话框事件
+  bindPreviewDialogEvents(dialog, links) {
+    const closeBtn = dialog.querySelector('.oal-preview-close');
+    const cancelBtn = dialog.querySelector('.oal-preview-cancel');
+    const openBtn = dialog.querySelector('.oal-preview-open');
+    const overlay = dialog.querySelector('.oal-preview-overlay');
+    const checkboxes = dialog.querySelectorAll('.oal-preview-checkbox');
+    const removeButtons = dialog.querySelectorAll('.oal-preview-item-remove');
+
+    // 关闭对话框
+    const closeDialog = () => {
+      dialog.style.opacity = '0';
+      dialog.style.transition = 'opacity 0.3s ease-out';
+
+      // 恢复控制面板的z-index
+      if (this.controlPanel) {
+        this.controlPanel.style.zIndex = '2147483647';
+      }
+
+      setTimeout(() => {
+        if (dialog.parentNode) {
+          dialog.parentNode.removeChild(dialog);
+        }
+      }, 300);
+    };
+
+    closeBtn.addEventListener('click', closeDialog);
+    cancelBtn.addEventListener('click', closeDialog);
+    overlay.addEventListener('click', closeDialog);
+
+    // 更新选中数量
+    const updateCount = () => {
+      const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+      dialog.querySelector('.oal-preview-count').textContent = checkedCount;
+      openBtn.disabled = checkedCount === 0;
+    };
+
+    // 复选框变化
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateCount);
+    });
+
+    // 移除按钮
+    removeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        const item = dialog.querySelector(`.oal-preview-item[data-index="${index}"]`);
+        const checkbox = item.querySelector('.oal-preview-checkbox');
+
+        if (item) {
+          // 取消勾选该项
+          if (checkbox) checkbox.checked = false;
+
+          item.style.opacity = '0';
+          item.style.transform = 'translateX(20px)';
+          item.style.transition = 'all 0.3s ease-out';
+          item.style.maxHeight = item.offsetHeight + 'px';
+
+          setTimeout(() => {
+            item.style.maxHeight = '0';
+            item.style.padding = '0';
+            item.style.margin = '0';
+            setTimeout(() => {
+              item.remove();
+              updateCount();
+            }, 300);
+          }, 50);
+        }
+      });
+    });
+
+    // 打开选中的链接
+    openBtn.addEventListener('click', () => {
+      const selectedLinks = [];
+      checkboxes.forEach((checkbox, index) => {
+        if (checkbox.checked) {
+          selectedLinks.push(links[index]);
+        }
+      });
+
+      if (selectedLinks.length === 0) {
+        this.showNotification('请至少选择一个链接', 'warning');
+        return;
+      }
+
+      // 准备打开链接
+      const urls = selectedLinks.map(link => link.href);
+      const pageInfo = {
+        url: window.location.href,
+        title: document.title,
+        filterMode: 'smart'
+      };
+
+      // 发送消息给background script来打开链接
+      chrome.runtime.sendMessage({
+        action: 'openLinks',
+        urls: urls,
+        pageInfo: pageInfo
+      });
+
+      this.showNotification(`正在打开 ${urls.length} 个链接...`, 'success');
+      closeDialog();
+    });
   }
 
   // 添加键盘快捷键支持
@@ -420,9 +644,9 @@ class OpenAllLinksManager {
       // Ctrl/Cmd + Shift + 组合键
       if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
         switch (e.key.toLowerCase()) {
-          case 'l': // Ctrl+Shift+L 切换选择模式
+          case 'l': // Ctrl+Shift+L 手动选择模式
             e.preventDefault();
-            this.toggleSelectionMode();
+            this.toggleManualMode();
             break;
           case 'a': // Ctrl+Shift+A 全选链接
             e.preventDefault();
@@ -436,7 +660,11 @@ class OpenAllLinksManager {
             e.preventDefault();
             this.togglePanelCollapse();
             break;
-          case 'q': // Ctrl+Shift+Q 快速打开推荐
+          case 'q': // Ctrl+Shift+Q 智能预览
+            e.preventDefault();
+            this.showSmartPreview();
+            break;
+          case 's': // Ctrl+Shift+S 智能打开（直接）
             e.preventDefault();
             this.quickOpenRecommended();
             break;
@@ -450,39 +678,6 @@ class OpenAllLinksManager {
     });
   }
 
-  toggleSelectionMode() {
-    this.isActive = !this.isActive;
-    const quickToggleBtn = this.controlPanel.querySelector('.oal-quick-toggle .oal-btn-text');
-    const quickOpenBtn = this.controlPanel.querySelector('.oal-quick-open');
-    const buttons = this.controlPanel.querySelectorAll('.oal-action-buttons .oal-btn');
-    const filterSelect = this.controlPanel.querySelector('.oal-filter-select');
-    const viewSelect = this.controlPanel.querySelector('.oal-view-select');
-
-    if (this.isActive) {
-      quickToggleBtn.textContent = '关闭选择';
-      quickOpenBtn.disabled = false;
-      buttons.forEach(btn => btn.disabled = false);
-      filterSelect.disabled = false;
-      if (viewSelect) viewSelect.disabled = false;
-      this.addLinkCheckboxes();
-      this.controlPanel.classList.add('active');
-
-      // 自动展开面板以显示更多选项
-      if (this.isPanelCollapsed) {
-        this.togglePanelCollapse();
-      }
-    } else {
-      quickToggleBtn.textContent = '开启选择';
-      quickOpenBtn.disabled = true;
-      buttons.forEach(btn => btn.disabled = true);
-      filterSelect.disabled = true;
-      if (viewSelect) viewSelect.disabled = true;
-      this.removeLinkCheckboxes();
-      this.controlPanel.classList.remove('active');
-      this.selectedLinks.clear();
-      this.updateUI();
-    }
-  }
 
   addLinkCheckboxes() {
     // 查找所有可能的链接
@@ -1006,7 +1201,16 @@ class OpenAllLinksManager {
 
   hideControlPanel() {
     if (this.isActive) {
-      this.toggleSelectionMode();
+      // 退出手动选择模式
+      const actionsSimple = this.controlPanel.querySelector('.oal-actions-simple');
+      const controls = this.controlPanel.querySelector('.oal-controls');
+
+      this.isActive = false;
+      actionsSimple.style.display = 'block';
+      controls.style.display = 'none';
+      this.removeLinkCheckboxes();
+      this.controlPanel.classList.remove('active');
+      this.selectedLinks.clear();
     }
     this.controlPanel.style.display = 'none';
   }
@@ -1101,7 +1305,7 @@ class OpenAllLinksManager {
           break;
         case 'quickSelectAll':
           if (!this.isActive) {
-            this.toggleSelectionMode();
+            this.toggleManualMode();
           }
           this.selectAllLinks();
           break;
