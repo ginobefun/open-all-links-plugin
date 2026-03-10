@@ -42,7 +42,10 @@ class BackgroundManager {
           this.handleClearHistory(sendResponse);
           return true;
         case 'reopenHistory':
-          this.handleReopenHistory(message.id, sender.tab.id, sendResponse);
+          this.handleReopenHistory(message.id, sender.tab ? sender.tab.id : null, sendResponse);
+          return true;
+        case 'reopenFavorite':
+          this.handleReopenFavorite(message.id, sender.tab ? sender.tab.id : null, sendResponse);
           return true;
         case 'getStatistics':
           this.handleGetStatistics(sendResponse);
@@ -551,9 +554,31 @@ class BackgroundManager {
         filterMode: historyItem.filterMode
       });
 
-      sendResponse({ success: true });
+      sendResponse({ success: true, count: historyItem.links.length });
     } catch (error) {
       console.error('Failed to reopen history:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async handleReopenFavorite(id, tabId, sendResponse) {
+    try {
+      const favorites = await this.historyManager.getFavorites();
+      const favoriteItem = favorites.find(item => item.id === id);
+      if (!favoriteItem) {
+        sendResponse({ success: false, error: 'Favorite item not found' });
+        return;
+      }
+
+      await this.handleOpenLinks(favoriteItem.links, tabId, {
+        url: favoriteItem.url,
+        title: favoriteItem.pageTitle || favoriteItem.name,
+        filterMode: favoriteItem.filterMode
+      });
+
+      sendResponse({ success: true, count: favoriteItem.links.length });
+    } catch (error) {
+      console.error('Failed to reopen favorite:', error);
       sendResponse({ success: false, error: error.message });
     }
   }
@@ -571,27 +596,6 @@ class BackgroundManager {
 
 // 初始化背景脚本管理器
 const backgroundManager = new BackgroundManager();
-
-// 处理扩展图标点击事件（可选）
-chrome.action.onClicked.addListener(async (tab) => {
-  try {
-    // 发送消息给content script切换控制面板
-    await chrome.tabs.sendMessage(tab.id, { action: 'togglePanel' });
-  } catch (error) {
-    console.error('Failed to toggle panel via icon click:', error);
-    // 如果content script未加载，可以注入脚本
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
-      // 再次尝试发送消息
-      await chrome.tabs.sendMessage(tab.id, { action: 'togglePanel' });
-    } catch (injectionError) {
-      console.error('Failed to inject content script:', injectionError);
-    }
-  }
-});
 
 // 处理标签页更新事件
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {

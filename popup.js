@@ -70,6 +70,32 @@ class PopupManager {
       this.resetLearningData();
     });
 
+    // 页面显示规则
+    document.getElementById('siteRuleMode').addEventListener('change', (e) => {
+      const mode = e.target.value;
+      const container = document.getElementById('siteRulesPatternsContainer');
+      container.style.display = mode === 'disabled' ? 'none' : 'block';
+      const label = document.getElementById('siteRulesLabel');
+      label.textContent = mode === 'blacklist'
+        ? '在以下页面上不显示（每行一条）:'
+        : '仅在以下页面上显示（每行一条）:';
+      this.saveSetting('siteRuleMode', mode);
+    });
+
+    document.getElementById('saveSiteRules').addEventListener('click', () => {
+      const patterns = document.getElementById('siteRulesPatterns').value
+        .split('\n')
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+      this.saveSetting('siteRulePatterns', patterns);
+      this.showNotification('规则已保存', 'success');
+    });
+
+    document.getElementById('toggleSiteRulesHelp').addEventListener('click', () => {
+      const help = document.getElementById('siteRulesHelp');
+      help.style.display = help.style.display === 'none' ? 'block' : 'none';
+    });
+
     // 历史记录和收藏
     document.getElementById('viewAllHistory').addEventListener('click', () => {
       this.viewAllHistory();
@@ -88,7 +114,9 @@ class PopupManager {
         maxTabs: 20,
         openDelay: 100,
         removeDuplicates: true,
-        enableLearning: true
+        enableLearning: true,
+        siteRuleMode: 'disabled',
+        siteRulePatterns: []
       });
 
       document.getElementById('openInNewWindow').checked = settings.openInNewWindow;
@@ -99,6 +127,18 @@ class PopupManager {
       document.getElementById('openDelay').value = settings.openDelay;
       document.getElementById('openDelayValue').textContent = settings.openDelay;
       document.getElementById('enableLearning').checked = settings.enableLearning;
+
+      // 加载页面显示规则
+      document.getElementById('siteRuleMode').value = settings.siteRuleMode;
+      const container = document.getElementById('siteRulesPatternsContainer');
+      container.style.display = settings.siteRuleMode === 'disabled' ? 'none' : 'block';
+      if (settings.siteRulePatterns.length > 0) {
+        document.getElementById('siteRulesPatterns').value = settings.siteRulePatterns.join('\n');
+      }
+      const label = document.getElementById('siteRulesLabel');
+      label.textContent = settings.siteRuleMode === 'blacklist'
+        ? '在以下页面上不显示（每行一条）:'
+        : '仅在以下页面上显示（每行一条）:';
 
       this.updateMaxTabsState();
     } catch (error) {
@@ -137,6 +177,12 @@ class PopupManager {
         this.showNotification('此页面类型不支持插件功能');
         return;
       }
+
+      // 检查页面显示规则
+      if (await this.isPageBlocked(tab.url)) {
+        this.showNotification('此页面已被规则排除', 'warning');
+        return;
+      }
       
       // 尝试注入脚本（如果需要）
       try {
@@ -149,7 +195,7 @@ class PopupManager {
         try {
           await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            files: ['link-classifier.js', 'content.js']
+            files: ['link-classifier.js', 'link-grouper.js', 'content.js']
           });
           await chrome.scripting.insertCSS({
             target: { tabId: tab.id },
@@ -318,6 +364,46 @@ class PopupManager {
     return false;
   }
 
+  async isPageBlocked(url) {
+    try {
+      const settings = await chrome.storage.sync.get({
+        siteRuleMode: 'disabled',
+        siteRulePatterns: []
+      });
+
+      if (settings.siteRuleMode === 'disabled' || settings.siteRulePatterns.length === 0) {
+        return false;
+      }
+
+      const matches = settings.siteRulePatterns.some(pattern => this.matchUrlPattern(url, pattern));
+
+      if (settings.siteRuleMode === 'blacklist') {
+        return matches; // 黑名单模式：匹配 = 被阻止
+      } else {
+        return !matches; // 白名单模式：不匹配 = 被阻止
+      }
+    } catch (error) {
+      console.error('Failed to check site rules:', error);
+      return false;
+    }
+  }
+
+  matchUrlPattern(url, pattern) {
+    try {
+      // 将通配符模式转换为正则表达式
+      const escaped = pattern
+        .replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&') // 转义除 * 外的特殊正则字符
+        .replace(/\*/g, '.*'); // 将 * 转换为 .*
+      // 匹配 URL 去掉协议后的部分
+      const urlWithoutProtocol = url.replace(/^https?:\/\//, '');
+      const regex = new RegExp('^' + escaped + '$', 'i');
+      return regex.test(urlWithoutProtocol);
+    } catch (e) {
+      console.warn('Invalid URL pattern:', pattern, e);
+      return false;
+    }
+  }
+
   showFeedback() {
     // 可以链接到GitHub Issues或反馈表单
     chrome.tabs.create({
@@ -469,7 +555,7 @@ class PopupManager {
         </div>
         ${item.tags && item.tags.length > 0 ? `
           <div class="history-tags">
-            ${item.tags.map(tag => `<span class="history-tag">${tag}</span>`).join('')}
+            ${item.tags.map(tag => `<span class="history-tag">${this.escapeHtml(tag)}</span>`).join('')}
           </div>
         ` : ''}
       </div>
@@ -513,7 +599,7 @@ class PopupManager {
         </div>
         ${fav.tags && fav.tags.length > 0 ? `
           <div class="favorite-tags">
-            ${fav.tags.map(tag => `<span class="favorite-tag">${tag}</span>`).join('')}
+            ${fav.tags.map(tag => `<span class="favorite-tag">${this.escapeHtml(tag)}</span>`).join('')}
           </div>
         ` : ''}
       </div>
@@ -562,7 +648,7 @@ class PopupManager {
   async reopenFavorite(id) {
     try {
       const response = await chrome.runtime.sendMessage({
-        action: 'reopenHistory',
+        action: 'reopenFavorite',
         id: id
       });
 

@@ -333,6 +333,11 @@ class LinkGrouper {
     return markdown;
   }
 
+  escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return text.replace(/[&<>"']/g, c => map[c]);
+  }
+
   exportAsHtml(groupedLinks) {
     let html = '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n';
     html += '<meta charset="UTF-8">\n';
@@ -343,14 +348,15 @@ class LinkGrouper {
     html += 'a{color:#3b82f6;text-decoration:none;}a:hover{text-decoration:underline;}</style>\n';
     html += '</head>\n<body>\n';
     html += '<h1>链接分组导出</h1>\n';
-    html += `<p>导出时间: ${new Date().toLocaleString()}</p>\n`;
+    html += `<p>导出时间: ${this.escapeHtml(new Date().toLocaleString())}</p>\n`;
 
     Object.keys(groupedLinks).forEach(key => {
       const group = groupedLinks[key];
-      html += `<h2>${group.icon} ${group.name} (${group.count})</h2>\n<ul>\n`;
+      html += `<h2>${this.escapeHtml(group.icon)} ${this.escapeHtml(group.name)} (${group.count})</h2>\n<ul>\n`;
       group.links.forEach(link => {
-        const text = link.textContent.trim() || '无标题';
-        html += `<li><a href="${link.href}" target="_blank">${text}</a></li>\n`;
+        const text = this.escapeHtml(link.textContent.trim() || '无标题');
+        const href = this.escapeHtml(link.href);
+        html += `<li><a href="${href}" target="_blank">${text}</a></li>\n`;
       });
       html += '</ul>\n';
     });

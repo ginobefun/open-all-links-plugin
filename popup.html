@@ -101,6 +101,46 @@
         </div>
       </div>
 
+      <div class="site-rules-section">
+        <h3>
+          页面显示规则
+          <button id="toggleSiteRulesHelp" class="view-all-btn">说明</button>
+        </h3>
+        <div class="setting-item">
+          <label class="setting-label">
+            模式:
+            <select id="siteRuleMode" class="site-rule-select">
+              <option value="disabled">不限制（所有页面）</option>
+              <option value="blacklist">黑名单（排除指定页面）</option>
+              <option value="whitelist">白名单（仅在指定页面）</option>
+            </select>
+          </label>
+        </div>
+        <div id="siteRulesPatternsContainer" class="site-rules-patterns" style="display:none;">
+          <div class="setting-item">
+            <label class="setting-label site-rules-label" id="siteRulesLabel">URL 匹配规则（每行一条）:</label>
+            <textarea id="siteRulesPatterns" class="site-rules-textarea" rows="4" placeholder="例如:&#10;*.github.com/*&#10;*.google.com/*&#10;example.com/path/*"></textarea>
+          </div>
+          <button id="saveSiteRules" class="action-btn secondary small">
+            <span class="btn-icon">💾</span>
+            <span class="btn-text">保存规则</span>
+          </button>
+        </div>
+        <div id="siteRulesHelp" class="site-rules-help" style="display:none;">
+          <p>配置插件在哪些页面显示或隐藏控制面板：</p>
+          <ul>
+            <li><strong>不限制</strong>：在所有页面生效</li>
+            <li><strong>黑名单</strong>：在匹配的页面上不显示</li>
+            <li><strong>白名单</strong>：仅在匹配的页面上显示</li>
+          </ul>
+          <p>URL 规则支持 <code>*</code> 通配符，例如：</p>
+          <ul>
+            <li><code>*.github.com/*</code> 匹配所有 GitHub 页面</li>
+            <li><code>example.com/blog/*</code> 匹配特定路径</li>
+          </ul>
+        </div>
+      </div>
+
       <div class="history-section">
         <h3>
           📚 最近操作

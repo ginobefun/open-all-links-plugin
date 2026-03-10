@@ -507,11 +507,19 @@ class LinkClassifier {
 
   // 获取推荐的链接列表
   getRecommendedLinks(allLinks) {
+    // 预先构建链接位置索引，避免 getLinkPosition 对每个链接都查询一次
+    this._linkPositionMap = new Map();
+    allLinks.forEach((link, index) => {
+      this._linkPositionMap.set(link, index);
+    });
+
     const classified = allLinks.map(link => ({
       element: link,
       classification: this.classifyLink(link),
       score: this.calculateLinkScore(link)
     }));
+
+    this._linkPositionMap = null; // 释放引用
 
     // 过滤出内容链接并按综合得分排序
     const contentLinks = classified
@@ -592,6 +600,10 @@ class LinkClassifier {
 
   // 获取链接在页面中的位置（0-based index）
   getLinkPosition(link) {
+    // 优先使用预构建的位置索引
+    if (this._linkPositionMap && this._linkPositionMap.has(link)) {
+      return this._linkPositionMap.get(link);
+    }
     const allLinks = Array.from(document.querySelectorAll('a[href]'));
     return allLinks.indexOf(link);
   }

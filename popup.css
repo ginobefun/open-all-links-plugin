@@ -337,6 +337,112 @@ body {
   background: #a8a8a8;
 }
 
+/* Site Rules Section */
+.site-rules-section {
+  margin-bottom: 20px;
+}
+
+.site-rules-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-rules-section h3::before {
+  content: "🌐";
+  font-size: 16px;
+}
+
+.site-rule-select {
+  flex: 1;
+  margin-left: 8px;
+  padding: 6px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.site-rule-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.site-rules-patterns {
+  margin-top: 8px;
+}
+
+.site-rules-label {
+  display: block !important;
+  margin-bottom: 6px;
+  font-size: 12px !important;
+  color: #6c757d !important;
+}
+
+.site-rules-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #495057;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+  margin-bottom: 8px;
+}
+
+.site-rules-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.site-rules-textarea::placeholder {
+  color: #adb5bd;
+}
+
+.site-rules-help {
+  margin-top: 8px;
+  padding: 12px;
+  background: #f0f4ff;
+  border: 1px solid #d6e0ff;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #495057;
+  line-height: 1.5;
+}
+
+.site-rules-help p {
+  margin-bottom: 6px;
+}
+
+.site-rules-help ul {
+  padding-left: 16px;
+  margin-bottom: 6px;
+}
+
+.site-rules-help li {
+  margin-bottom: 4px;
+}
+
+.site-rules-help code {
+  background: #e7eaf8;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #667eea;
+}
+
 /* History and Favorites Section */
 .history-section,
 .favorites-section {

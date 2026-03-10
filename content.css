@@ -713,7 +713,6 @@
 /* 响应式设计 */
 @media (max-width: 768px) {
   #open-all-links-panel {
-    width: 320px;
     top: 10px;
     right: 10px;
     left: 10px;

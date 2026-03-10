@@ -16,11 +16,53 @@ class OpenAllLinksManager {
     this.init();
   }
 
-  init() {
+  async init() {
+    // 先检查页面显示规则，如果被阻止则不初始化面板
+    const blocked = await this.checkSiteRules();
+    if (blocked) {
+      this.siteBlocked = true;
+      // 仍然监听消息，以便能收到 togglePanel 请求
+      this.listenForMessages();
+      return;
+    }
+    this.siteBlocked = false;
     this.loadUserPreferences();
     this.createControlPanel();
     this.listenForMessages();
     this.handleWindowResize();
+  }
+
+  async checkSiteRules() {
+    try {
+      const settings = await chrome.storage.sync.get({
+        siteRuleMode: 'disabled',
+        siteRulePatterns: []
+      });
+
+      if (settings.siteRuleMode === 'disabled' || settings.siteRulePatterns.length === 0) {
+        return false;
+      }
+
+      const url = window.location.href;
+      const urlWithoutProtocol = url.replace(/^https?:\/\//, '');
+
+      const matches = settings.siteRulePatterns.some(pattern => {
+        try {
+          const escaped = pattern
+            .replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&')
+            .replace(/\*/g, '.*');
+          const regex = new RegExp('^' + escaped + '$', 'i');
+          return regex.test(urlWithoutProtocol);
+        } catch (e) {
+          return false;
+        }
+      });
+
+      return settings.siteRuleMode === 'blacklist' ? matches : !matches;
+    } catch (error) {
+      console.error('Failed to check site rules:', error);
+      return false;
+    }
   }
 
   createControlPanel() {
