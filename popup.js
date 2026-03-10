@@ -899,18 +899,6 @@ class PopupManager {
   }
 }
 
-// 添加动画样式
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeInOut {
-    0% { opacity: 0; transform: translateX(100%); }
-    20% { opacity: 1; transform: translateX(0); }
-    80% { opacity: 1; transform: translateX(0); }
-    100% { opacity: 0; transform: translateX(100%); }
-  }
-`;
-document.head.appendChild(style);
-
 // 初始化弹窗管理器
 document.addEventListener('DOMContentLoaded', () => {
   new PopupManager();

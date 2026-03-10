@@ -185,6 +185,18 @@ class BackgroundManager {
       }
     } catch (error) {
       console.error('Context menu action failed:', error);
+      // 菜单ID到消息action的映射
+      const menuIdToAction = {
+        'oal-toggle-panel': 'togglePanel',
+        'oal-toggle-select': 'toggleManualMode',
+        'oal-select-all': 'quickSelectAll',
+        'oal-smart-open': 'smartOpen',
+        'oal-open-selected': 'openSelected',
+        'oal-open-selection-links': 'openSelectionLinks'
+      };
+      const retryAction = menuIdToAction[info.menuItemId];
+      if (!retryAction) return;
+
       // 尝试注入 content script 后重试
       try {
         await chrome.scripting.executeScript({
@@ -195,9 +207,8 @@ class BackgroundManager {
           target: { tabId },
           files: ['content.css']
         });
-        // 等一下再重试
         await this.sleep(200);
-        await chrome.tabs.sendMessage(tabId, { action: info.menuItemId.replace('oal-', '') });
+        await chrome.tabs.sendMessage(tabId, { action: retryAction });
       } catch (retryError) {
         console.error('Context menu retry failed:', retryError);
       }
@@ -679,12 +690,8 @@ class BackgroundManager {
         return;
       }
 
-      // 重新打开历史记录中的链接
-      await this.handleOpenLinks(historyItem.links, tabId, {
-        url: historyItem.url,
-        title: historyItem.pageTitle,
-        filterMode: historyItem.filterMode
-      });
+      // 直接打开链接，不重复记录历史
+      await this._openLinksWithoutHistory(historyItem.links, tabId);
 
       sendResponse({ success: true, count: historyItem.links.length });
     } catch (error) {
@@ -702,16 +709,37 @@ class BackgroundManager {
         return;
       }
 
-      await this.handleOpenLinks(favoriteItem.links, tabId, {
-        url: favoriteItem.url,
-        title: favoriteItem.pageTitle || favoriteItem.name,
-        filterMode: favoriteItem.filterMode
-      });
+      // 直接打开链接，不重复记录历史
+      await this._openLinksWithoutHistory(favoriteItem.links, tabId);
 
       sendResponse({ success: true, count: favoriteItem.links.length });
     } catch (error) {
       console.error('Failed to reopen favorite:', error);
       sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // 打开链接但不记录历史（用于重新打开历史/收藏）
+  async _openLinksWithoutHistory(urls, tabId) {
+    if (!urls || urls.length === 0) return;
+    const settings = await this.getSettings();
+
+    let processedUrls = urls;
+    if (settings.removeDuplicates) {
+      processedUrls = this.removeDuplicateUrls(urls);
+    }
+    const maxTabs = settings.limitTabs ? settings.maxTabs : processedUrls.length;
+    const urlsToOpen = processedUrls.slice(0, maxTabs);
+
+    if (settings.openInNewWindow) {
+      await this.openInNewWindow(urlsToOpen, settings);
+    } else {
+      await this.openInNewTabs(urlsToOpen, tabId, settings);
+    }
+
+    if (tabId) {
+      const skipped = processedUrls.length - urlsToOpen.length;
+      this.sendNotificationToTab(tabId, `成功打开 ${urlsToOpen.length} 个链接${skipped > 0 ? `，跳过 ${skipped} 个` : ''}`);
     }
   }
 
@@ -728,14 +756,6 @@ class BackgroundManager {
 
 // 初始化背景脚本管理器
 const backgroundManager = new BackgroundManager();
-
-// 处理标签页更新事件
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    // 页面加载完成，可以进行一些初始化操作
-    // 例如：检查页面是否支持插件功能
-  }
-});
 
 // 处理扩展卸载事件
 chrome.runtime.onSuspend.addListener(() => {

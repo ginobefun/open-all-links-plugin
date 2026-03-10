@@ -221,10 +221,7 @@ class LinkClassifier {
   // 分类链接
   classifyLink(link) {
     const rules = this.getCurrentSiteRules();
-    const linkText = link.textContent.trim().toLowerCase();
-    const linkHref = link.href;
-    const linkClasses = link.className;
-    
+
     // 检查是否应该排除
     if (this.shouldExcludeLink(link, rules)) {
       return { type: 'excluded', reason: 'excluded_by_rules' };
@@ -258,7 +255,6 @@ class LinkClassifier {
   shouldExcludeLink(link, rules) {
     const href = link.href;
     const element = link;
-    const linkText = link.textContent.trim();
 
     // 检查是否是主页链接
     if (this.isHomepageLink(link, rules)) {

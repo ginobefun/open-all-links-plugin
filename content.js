@@ -328,11 +328,6 @@ class OpenAllLinksManager {
       'navigation': '🧭 导航链接'
     };
     
-    const currentModeElement = this.controlPanel.querySelector('#oal-current-mode');
-    if (currentModeElement) {
-      currentModeElement.textContent = modeNames[newMode] || '智能推荐';
-    }
-    
     this.showNotification(`已切换到: ${modeNames[newMode]}`);
   }
 
@@ -519,7 +514,14 @@ class OpenAllLinksManager {
             const score = this.classifier.calculateLinkScore(link);
             const linkText = link.textContent.trim() || '(无标题)';
             const linkHref = link.href;
-            const domain = new URL(linkHref).hostname;
+            let domain = '', pathname = '';
+            try {
+              const urlObj = new URL(linkHref);
+              domain = urlObj.hostname;
+              pathname = urlObj.pathname;
+            } catch (e) {
+              domain = linkHref;
+            }
 
             return `
               <div class="oal-preview-item" data-index="${index}">
@@ -530,7 +532,7 @@ class OpenAllLinksManager {
                   <div class="oal-preview-item-title">${this.escapeHtml(linkText)}</div>
                   <div class="oal-preview-item-url" title="${this.escapeHtml(linkHref)}">
                     <span class="oal-preview-domain">${this.escapeHtml(domain)}</span>
-                    <span class="oal-preview-path">${this.escapeHtml(new URL(linkHref).pathname.substring(0, 50))}${new URL(linkHref).pathname.length > 50 ? '...' : ''}</span>
+                    <span class="oal-preview-path">${this.escapeHtml(pathname.substring(0, 50))}${pathname.length > 50 ? '...' : ''}</span>
                   </div>
                   <div class="oal-preview-item-meta">
                     <span class="oal-preview-score" title="综合评分">⭐ ${score.toFixed(1)}</span>
@@ -857,8 +859,8 @@ class OpenAllLinksManager {
         </div>
         <div class="oal-group-links">
           ${group.links.map((link, index) => {
-            const linkText = link.textContent.trim();
-            const linkHref = link.href;
+            const linkText = this.escapeHtml(link.textContent.trim());
+            const linkHref = this.escapeHtml(link.href);
             return `
               <div class="oal-group-link-item" data-link-index="${index}">
                 <input type="checkbox" class="oal-group-checkbox">
@@ -1095,8 +1097,8 @@ class OpenAllLinksManager {
   }
 
   updateStats(totalLinks) {
-    const totalElement = this.controlPanel.querySelector('.oal-total-links');
-    totalElement.textContent = totalLinks;
+    const totalElement = this.controlPanel.querySelector('.oal-found-count');
+    if (totalElement) totalElement.textContent = totalLinks;
   }
 
   openSelectedLinks() {
@@ -1790,12 +1792,6 @@ class OpenAllLinksManager {
         }
       }, 200);
     }
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
 }
