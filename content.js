@@ -30,6 +30,7 @@ class OpenAllLinksManager {
     this.createControlPanel();
     this.listenForMessages();
     this.handleWindowResize();
+    this.listenForSettingsChanges();
   }
 
   async checkSiteRules() {
@@ -679,45 +680,100 @@ class OpenAllLinksManager {
 
   // 添加键盘快捷键支持
   addKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
-      // 只在面板显示时响应快捷键
-      if (this.controlPanel.style.display === 'none') return;
-      
-      // Ctrl/Cmd + Shift + 组合键
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-        switch (e.key.toLowerCase()) {
-          case 'l': // Ctrl+Shift+L 手动选择模式
-            e.preventDefault();
-            this.toggleManualMode();
-            break;
-          case 'a': // Ctrl+Shift+A 全选链接
-            e.preventDefault();
-            if (this.isActive) this.selectAllLinks();
-            break;
-          case 'o': // Ctrl+Shift+O 打开选中链接
-            e.preventDefault();
-            if (this.selectedLinks.size > 0) this.openSelectedLinks();
-            break;
-          case 'c': // Ctrl+Shift+C 折叠/展开面板
-            e.preventDefault();
-            this.togglePanelCollapse();
-            break;
-          case 'q': // Ctrl+Shift+Q 智能预览
-            e.preventDefault();
-            this.showSmartPreview();
-            break;
-          case 's': // Ctrl+Shift+S 智能打开（直接）
-            e.preventDefault();
-            this.quickOpenRecommended();
-            break;
+    // 加载自定义快捷键配置
+    this.loadCustomShortcuts().then(() => {
+      document.addEventListener('keydown', (e) => {
+        // 只在面板显示时响应快捷键
+        if (this.controlPanel.style.display === 'none') return;
+
+        // Escape 键关闭面板（不可修改）
+        if (e.key === 'Escape' && !this.isPanelPinned) {
+          this.hideControlPanel();
+          return;
         }
+
+        // 检查自定义快捷键匹配
+        const matchedAction = this.matchShortcut(e);
+        if (matchedAction) {
+          e.preventDefault();
+          this.executeShortcutAction(matchedAction);
+        }
+      });
+    });
+  }
+
+  async loadCustomShortcuts() {
+    try {
+      const result = await chrome.storage.sync.get({
+        customShortcuts: {
+          toggleSelect: { ctrl: true, shift: true, key: 'l' },
+          selectAll: { ctrl: true, shift: true, key: 'a' },
+          openSelected: { ctrl: true, shift: true, key: 'o' },
+          collapsePanel: { ctrl: true, shift: true, key: 'c' },
+          smartPreview: { ctrl: true, shift: true, key: 'q' },
+          smartOpen: { ctrl: true, shift: true, key: 's' }
+        }
+      });
+      this.shortcuts = result.customShortcuts;
+    } catch (error) {
+      console.error('Failed to load custom shortcuts:', error);
+      this.shortcuts = {
+        toggleSelect: { ctrl: true, shift: true, key: 'l' },
+        selectAll: { ctrl: true, shift: true, key: 'a' },
+        openSelected: { ctrl: true, shift: true, key: 'o' },
+        collapsePanel: { ctrl: true, shift: true, key: 'c' },
+        smartPreview: { ctrl: true, shift: true, key: 'q' },
+        smartOpen: { ctrl: true, shift: true, key: 's' }
+      };
+    }
+  }
+
+  matchShortcut(e) {
+    if (!this.shortcuts) return null;
+    const pressedKey = e.key.toLowerCase();
+    const ctrlPressed = e.ctrlKey || e.metaKey;
+
+    for (const [action, shortcut] of Object.entries(this.shortcuts)) {
+      if (shortcut.ctrl === ctrlPressed &&
+          (shortcut.alt || false) === e.altKey &&
+          (shortcut.shift || false) === e.shiftKey &&
+          shortcut.key === pressedKey) {
+        return action;
       }
-      
-      // Escape 键关闭面板
-      if (e.key === 'Escape' && !this.isPanelPinned) {
-        this.hideControlPanel();
+    }
+    return null;
+  }
+
+  // 监听设置变化，实时更新快捷键
+  listenForSettingsChanges() {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'sync' && changes.customShortcuts) {
+        this.shortcuts = changes.customShortcuts.newValue;
       }
     });
+  }
+
+  executeShortcutAction(action) {
+    switch (action) {
+      case 'toggleSelect':
+        this.toggleManualMode();
+        break;
+      case 'selectAll':
+        if (this.isActive) this.selectAllLinks();
+        break;
+      case 'openSelected':
+        if (this.selectedLinks.size > 0) this.openSelectedLinks();
+        break;
+      case 'collapsePanel':
+        this.togglePanelCollapse();
+        break;
+      case 'smartPreview':
+        this.showSmartPreview();
+        break;
+      case 'smartOpen':
+        this.quickOpenRecommended();
+        break;
+    }
   }
 
 
@@ -1070,6 +1126,55 @@ class OpenAllLinksManager {
     this.showNotification(`正在打开 ${urls.length} 个链接...`);
   }
 
+  // 打开当前选区中的所有链接
+  openLinksInSelection() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      this.showNotification('没有选中任何内容', 'warning');
+      return;
+    }
+
+    const urls = [];
+    const seen = new Set();
+
+    for (let i = 0; i < selection.rangeCount; i++) {
+      const range = selection.getRangeAt(i);
+      const container = range.commonAncestorContainer;
+      const root = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+
+      if (!root) continue;
+
+      // 查找选区中的所有链接
+      const links = root.querySelectorAll('a[href]');
+      links.forEach(link => {
+        if (selection.containsNode(link, true) && link.href && !link.href.startsWith('javascript:')) {
+          const href = link.href;
+          if (!seen.has(href)) {
+            seen.add(href);
+            urls.push(href);
+          }
+        }
+      });
+    }
+
+    if (urls.length === 0) {
+      this.showNotification('选区中没有找到链接', 'warning');
+      return;
+    }
+
+    chrome.runtime.sendMessage({
+      action: 'openLinks',
+      urls: urls,
+      pageInfo: {
+        url: window.location.href,
+        title: document.title,
+        filterMode: 'selection'
+      }
+    });
+
+    this.showNotification(`正在打开选区中的 ${urls.length} 个链接...`);
+  }
+
   showNotification(message, type = 'info', duration = 3000) {
     const notification = document.createElement('div');
     notification.className = `oal-notification oal-notification-${type}`;
@@ -1339,6 +1444,7 @@ class OpenAllLinksManager {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       switch (message.action) {
         case 'togglePanel':
+          if (this.siteBlocked) break;
           if (this.controlPanel.style.display === 'none') {
             this.showControlPanel();
           } else {
@@ -1365,6 +1471,32 @@ class OpenAllLinksManager {
           break;
         case 'resetLearningData':
           this.resetLearningData();
+          break;
+        case 'toggleManualMode':
+          if (this.siteBlocked) break;
+          if (this.controlPanel.style.display === 'none') {
+            this.showControlPanel();
+          }
+          this.toggleManualMode();
+          break;
+        case 'smartOpen':
+          if (this.siteBlocked) break;
+          if (this.controlPanel.style.display === 'none') {
+            this.showControlPanel();
+          }
+          this.quickOpenRecommended();
+          break;
+        case 'openSelected':
+          if (this.siteBlocked) break;
+          if (this.selectedLinks.size > 0) {
+            this.openSelectedLinks();
+          } else {
+            this.showNotification('还没有选中任何链接', 'warning');
+          }
+          break;
+        case 'openSelectionLinks':
+          if (this.siteBlocked) break;
+          this.openLinksInSelection();
           break;
         default:
           break;

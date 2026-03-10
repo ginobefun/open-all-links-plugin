@@ -179,35 +179,54 @@
         <details>
           <summary>⌨️ 键盘快捷键</summary>
           <div class="shortcuts-content">
-            <div class="shortcut-item">
-              <div class="shortcut-keys">
+            <p class="shortcuts-hint">点击快捷键区域可自定义绑定，按下新的组合键即可修改</p>
+            <div class="shortcut-item" data-action="toggleSelect">
+              <div class="shortcut-keys shortcut-editable" data-action="toggleSelect" tabindex="0" title="点击修改快捷键">
                 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd>
               </div>
               <div class="shortcut-desc">切换选择模式</div>
             </div>
-            <div class="shortcut-item">
-              <div class="shortcut-keys">
+            <div class="shortcut-item" data-action="selectAll">
+              <div class="shortcut-keys shortcut-editable" data-action="selectAll" tabindex="0" title="点击修改快捷键">
                 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd>
               </div>
               <div class="shortcut-desc">全选链接</div>
             </div>
-            <div class="shortcut-item">
-              <div class="shortcut-keys">
+            <div class="shortcut-item" data-action="openSelected">
+              <div class="shortcut-keys shortcut-editable" data-action="openSelected" tabindex="0" title="点击修改快捷键">
                 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd>
               </div>
               <div class="shortcut-desc">打开选中链接</div>
             </div>
-            <div class="shortcut-item">
-              <div class="shortcut-keys">
+            <div class="shortcut-item" data-action="collapsePanel">
+              <div class="shortcut-keys shortcut-editable" data-action="collapsePanel" tabindex="0" title="点击修改快捷键">
                 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd>
               </div>
               <div class="shortcut-desc">折叠/展开面板</div>
+            </div>
+            <div class="shortcut-item" data-action="smartPreview">
+              <div class="shortcut-keys shortcut-editable" data-action="smartPreview" tabindex="0" title="点击修改快捷键">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Q</kbd>
+              </div>
+              <div class="shortcut-desc">智能预览</div>
+            </div>
+            <div class="shortcut-item" data-action="smartOpen">
+              <div class="shortcut-keys shortcut-editable" data-action="smartOpen" tabindex="0" title="点击修改快捷键">
+                <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd>
+              </div>
+              <div class="shortcut-desc">智能打开</div>
             </div>
             <div class="shortcut-item">
               <div class="shortcut-keys">
                 <kbd>Esc</kbd>
               </div>
-              <div class="shortcut-desc">关闭面板</div>
+              <div class="shortcut-desc">关闭面板（不可修改）</div>
+            </div>
+            <div style="margin-top: 10px;">
+              <button id="resetShortcuts" class="action-btn secondary small">
+                <span class="btn-icon">🔄</span>
+                <span class="btn-text">恢复默认快捷键</span>
+              </button>
             </div>
           </div>
         </details>

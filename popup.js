@@ -96,6 +96,13 @@ class PopupManager {
       help.style.display = help.style.display === 'none' ? 'block' : 'none';
     });
 
+    // 快捷键自定义
+    this.setupShortcutEditing();
+
+    document.getElementById('resetShortcuts').addEventListener('click', () => {
+      this.resetShortcuts();
+    });
+
     // 历史记录和收藏
     document.getElementById('viewAllHistory').addEventListener('click', () => {
       this.viewAllHistory();
@@ -402,6 +409,157 @@ class PopupManager {
       console.warn('Invalid URL pattern:', pattern, e);
       return false;
     }
+  }
+
+  // ==========================================
+  // 快捷键自定义
+  // ==========================================
+
+  getDefaultShortcuts() {
+    return {
+      toggleSelect: { ctrl: true, shift: true, key: 'l' },
+      selectAll: { ctrl: true, shift: true, key: 'a' },
+      openSelected: { ctrl: true, shift: true, key: 'o' },
+      collapsePanel: { ctrl: true, shift: true, key: 'c' },
+      smartPreview: { ctrl: true, shift: true, key: 'q' },
+      smartOpen: { ctrl: true, shift: true, key: 's' }
+    };
+  }
+
+  setupShortcutEditing() {
+    const editableKeys = document.querySelectorAll('.shortcut-editable');
+    editableKeys.forEach(el => {
+      el.addEventListener('click', () => {
+        this.startRecordingShortcut(el);
+      });
+    });
+
+    // 加载已保存的快捷键
+    this.loadShortcuts();
+  }
+
+  async loadShortcuts() {
+    try {
+      const result = await chrome.storage.sync.get({
+        customShortcuts: this.getDefaultShortcuts()
+      });
+      this.customShortcuts = result.customShortcuts;
+      this.renderShortcuts();
+    } catch (error) {
+      console.error('Failed to load shortcuts:', error);
+      this.customShortcuts = this.getDefaultShortcuts();
+    }
+  }
+
+  renderShortcuts() {
+    const editableKeys = document.querySelectorAll('.shortcut-editable');
+    editableKeys.forEach(el => {
+      const action = el.dataset.action;
+      if (this.customShortcuts[action]) {
+        el.innerHTML = this.shortcutToKbd(this.customShortcuts[action]);
+      }
+    });
+  }
+
+  shortcutToKbd(shortcut) {
+    const parts = [];
+    if (shortcut.ctrl) parts.push('<kbd>Ctrl</kbd>');
+    if (shortcut.alt) parts.push('<kbd>Alt</kbd>');
+    if (shortcut.shift) parts.push('<kbd>Shift</kbd>');
+    if (shortcut.key) parts.push(`<kbd>${this.escapeHtml(shortcut.key.toUpperCase())}</kbd>`);
+    return parts.join(' + ');
+  }
+
+  startRecordingShortcut(el) {
+    // 如果已在录制另一个，先取消
+    const recording = document.querySelector('.shortcut-editable.recording');
+    if (recording && recording !== el) {
+      recording.classList.remove('recording');
+      this.renderShortcuts();
+    }
+
+    el.classList.add('recording');
+    el.innerHTML = '<kbd style="color: #ef4444;">按下新的快捷键...</kbd>';
+
+    const handler = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 忽略单独的修饰键
+      if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+
+      // Escape 取消录制
+      if (e.key === 'Escape') {
+        el.classList.remove('recording');
+        el.removeEventListener('keydown', handler);
+        this.renderShortcuts();
+        return;
+      }
+
+      // 必须包含至少一个修饰键
+      if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+        return;
+      }
+
+      const newShortcut = {
+        ctrl: e.ctrlKey || e.metaKey,
+        alt: e.altKey,
+        shift: e.shiftKey,
+        key: e.key.toLowerCase()
+      };
+
+      // 检测冲突
+      const action = el.dataset.action;
+      const conflict = this.findShortcutConflict(action, newShortcut);
+      if (conflict) {
+        this.showNotification(`快捷键与"${conflict}"冲突`, 'warning');
+        el.classList.remove('recording');
+        el.removeEventListener('keydown', handler);
+        this.renderShortcuts();
+        return;
+      }
+
+      // 保存新快捷键
+      this.customShortcuts[action] = newShortcut;
+      this.saveSetting('customShortcuts', this.customShortcuts);
+
+      el.classList.remove('recording');
+      el.removeEventListener('keydown', handler);
+      this.renderShortcuts();
+      this.showNotification('快捷键已更新', 'success');
+    };
+
+    el.addEventListener('keydown', handler);
+    el.focus();
+  }
+
+  findShortcutConflict(currentAction, newShortcut) {
+    const actionNames = {
+      toggleSelect: '切换选择模式',
+      selectAll: '全选链接',
+      openSelected: '打开选中链接',
+      collapsePanel: '折叠/展开面板',
+      smartPreview: '智能预览',
+      smartOpen: '智能打开'
+    };
+
+    for (const [action, shortcut] of Object.entries(this.customShortcuts)) {
+      if (action === currentAction) continue;
+      if (shortcut.ctrl === newShortcut.ctrl &&
+          shortcut.alt === newShortcut.alt &&
+          shortcut.shift === newShortcut.shift &&
+          shortcut.key === newShortcut.key) {
+        return actionNames[action] || action;
+      }
+    }
+    return null;
+  }
+
+  async resetShortcuts() {
+    this.customShortcuts = this.getDefaultShortcuts();
+    await this.saveSetting('customShortcuts', this.customShortcuts);
+    this.renderShortcuts();
+    this.showNotification('快捷键已恢复默认', 'success');
   }
 
   showFeedback() {

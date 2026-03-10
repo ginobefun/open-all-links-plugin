@@ -12,6 +12,7 @@ class BackgroundManager {
   init() {
     this.setupMessageListener();
     this.setupInstallHandler();
+    this.setupContextMenus();
   }
 
   setupMessageListener() {
@@ -70,6 +71,137 @@ class BackgroundManager {
         this.handleUpdate(details.previousVersion);
       }
     });
+  }
+
+  setupContextMenus() {
+    // 在安装/启动时创建右键菜单
+    chrome.contextMenus.removeAll(() => {
+      // 父菜单
+      chrome.contextMenus.create({
+        id: 'oal-parent',
+        title: 'Open All Links',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      // 页面级操作
+      chrome.contextMenus.create({
+        id: 'oal-toggle-panel',
+        parentId: 'oal-parent',
+        title: '切换控制面板',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      chrome.contextMenus.create({
+        id: 'oal-toggle-select',
+        parentId: 'oal-parent',
+        title: '开启/关闭选择模式',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      chrome.contextMenus.create({
+        id: 'oal-separator-1',
+        parentId: 'oal-parent',
+        type: 'separator',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      chrome.contextMenus.create({
+        id: 'oal-select-all',
+        parentId: 'oal-parent',
+        title: '全选页面链接',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      chrome.contextMenus.create({
+        id: 'oal-smart-open',
+        parentId: 'oal-parent',
+        title: '智能打开推荐链接',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      chrome.contextMenus.create({
+        id: 'oal-open-selected',
+        parentId: 'oal-parent',
+        title: '打开已选中的链接',
+        contexts: ['page', 'selection', 'link']
+      });
+
+      chrome.contextMenus.create({
+        id: 'oal-separator-2',
+        parentId: 'oal-parent',
+        type: 'separator',
+        contexts: ['selection']
+      });
+
+      // 选区专用：打开选区中的所有链接
+      chrome.contextMenus.create({
+        id: 'oal-open-selection-links',
+        parentId: 'oal-parent',
+        title: '打开选区中的所有链接',
+        contexts: ['selection']
+      });
+    });
+
+    // 监听右键菜单点击
+    chrome.contextMenus.onClicked.addListener((info, tab) => {
+      this.handleContextMenuClick(info, tab);
+    });
+  }
+
+  async handleContextMenuClick(info, tab) {
+    if (!tab || !tab.id) return;
+
+    const tabId = tab.id;
+
+    try {
+      switch (info.menuItemId) {
+        case 'oal-toggle-panel':
+          await chrome.tabs.sendMessage(tabId, { action: 'togglePanel' });
+          break;
+
+        case 'oal-toggle-select':
+          await chrome.tabs.sendMessage(tabId, { action: 'toggleManualMode' });
+          break;
+
+        case 'oal-select-all':
+          await chrome.tabs.sendMessage(tabId, { action: 'quickSelectAll' });
+          break;
+
+        case 'oal-smart-open':
+          await chrome.tabs.sendMessage(tabId, { action: 'smartOpen' });
+          break;
+
+        case 'oal-open-selected':
+          await chrome.tabs.sendMessage(tabId, { action: 'openSelected' });
+          break;
+
+        case 'oal-open-selection-links':
+          // 打开选区中的链接 - 需要 content script 从选区中提取链接
+          await chrome.tabs.sendMessage(tabId, {
+            action: 'openSelectionLinks',
+            selectionText: info.selectionText
+          });
+          break;
+      }
+    } catch (error) {
+      console.error('Context menu action failed:', error);
+      // 尝试注入 content script 后重试
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['link-classifier.js', 'link-grouper.js', 'content.js']
+        });
+        await chrome.scripting.insertCSS({
+          target: { tabId },
+          files: ['content.css']
+        });
+        // 等一下再重试
+        await this.sleep(200);
+        await chrome.tabs.sendMessage(tabId, { action: info.menuItemId.replace('oal-', '') });
+      } catch (retryError) {
+        console.error('Context menu retry failed:', retryError);
+      }
+    }
   }
 
   async handleOpenLinks(urls, tabId, pageInfo = {}) {

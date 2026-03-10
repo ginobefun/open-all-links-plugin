@@ -839,3 +839,40 @@ body {
   color: #6c757d;
   text-align: right;
 }
+
+.shortcuts-hint {
+  font-size: 11px;
+  color: #adb5bd;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.shortcut-editable {
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 4px;
+  transition: all 0.2s ease;
+}
+
+.shortcut-editable:hover {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.shortcut-editable:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.shortcut-editable.recording {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1); }
+}
